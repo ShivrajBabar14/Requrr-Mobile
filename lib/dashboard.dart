@@ -188,16 +188,15 @@ class _DashboardState extends State<Dashboard> {
   Future<void> fetchRenewals({DateTime? date, bool isYearView = false}) async {
     setState(() {
       isLoading = true;
+      incomeRecords = [];
     });
 
     try {
-      // Get token from SharedPreferences if not available
       if (aToken == null || aToken!.isEmpty) {
         final prefs = await SharedPreferences.getInstance();
         aToken = prefs.getString('auth_token');
       }
 
-      // Validate token
       if (!isTokenValid(aToken)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Session expired. Please login again.')),
@@ -209,146 +208,103 @@ class _DashboardState extends State<Dashboard> {
       }
 
       final trimmedToken = aToken!.trim();
-      print('Using token: ${trimmedToken.substring(0, 10)}...');
-
-      // Try both with and without www subdomain for income records
       final urls = [
         'https://requrr.com/api/income_records/upcoming',
         'https://www.requrr.com/api/income_records/upcoming',
       ];
 
       http.Response? response;
-      Exception? lastError;
-
       for (final url in urls) {
         try {
-          print('Trying URL: $url');
           response = await http
               .get(
                 Uri.parse(url),
                 headers: {
-                  'Content-Type': 'application/json',
                   'Authorization': 'Bearer $trimmedToken',
                   'Accept': 'application/json',
                 },
               )
               .timeout(const Duration(seconds: 10));
-
           if (response.statusCode == 200) break;
+        } catch (_) {}
+      }
+
+      if (response == null || response.statusCode != 200) {
+        throw Exception('Failed to fetch income records');
+      }
+
+      final List<dynamic> assignmentsList = json.decode(response.body);
+
+      // Filter by date if provided
+      List<dynamic> filteredList = assignmentsList.where((assignment) {
+        if (assignment['due_date'] == null) return false;
+        try {
+          final dueDate = DateTime.parse(assignment['due_date']);
+          if (date == null) {
+            final now = DateTime.now();
+            return dueDate.month == now.month && dueDate.year == now.year;
+          } else if (isYearView) {
+            return dueDate.year == date.year;
+          } else {
+            return dueDate.month == date.month && dueDate.year == date.year;
+          }
         } catch (e) {
-          lastError = e as Exception;
-          print('Error with $url: $e');
+          return false;
         }
-      }
+      }).toList();
 
-      if (response == null) {
-        throw lastError ?? Exception('No response from server');
-      }
+      setState(() {
+        incomeRecords = filteredList.map((e) {
+          e['company_name'] = 'Loading...';
+          return e;
+        }).toList();
+      });
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      for (int i = 0; i < filteredList.length; i++) {
+        final assignment = filteredList[i];
+        final clientId = assignment['client_id'];
 
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        List<dynamic> assignmentsList = responseData is List
-            ? responseData
-            : [];
+        if (clientId != null) {
+          final clientUrls = [
+            'https://requrr.com/api/clients/$clientId',
+            'https://www.requrr.com/api/clients/$clientId',
+          ];
 
-        // For each assignment, fetch client details and add company_name
-        for (var assignment in assignmentsList) {
-          try {
-            final clientId = assignment['client_id'];
-            if (clientId != null) {
-              print('Client API call token: ${trimmedToken}');
+          http.Response? clientResponse;
+          for (final clientUrl in clientUrls) {
+            try {
+              clientResponse = await http
+                  .get(
+                    Uri.parse(clientUrl),
+                    headers: {
+                      'Authorization': 'Bearer $trimmedToken',
+                      'Accept': 'application/json',
+                    },
+                  )
+                  .timeout(const Duration(seconds: 3));
+              if (clientResponse.statusCode == 200) break;
+            } catch (_) {}
+          }
 
-              // Try both with and without www subdomain for client API
-              final clientUrls = [
-                'https://requrr.com/api/clients/$clientId',
-                'https://www.requrr.com/api/clients/$clientId',
-              ];
-
-              http.Response? clientResponse;
-              for (final clientUrl in clientUrls) {
-                try {
-                  clientResponse = await http
-                      .get(
-                        Uri.parse(clientUrl),
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': 'Bearer $trimmedToken',
-                          'Accept': 'application/json',
-                        },
-                      )
-                      .timeout(const Duration(seconds: 5));
-
-                  if (clientResponse.statusCode == 200) break;
-                } catch (e) {
-                  print('Error with client URL $clientUrl: $e');
-                }
-              }
-
-              if (clientResponse == null) {
-                throw Exception('No response from client API');
-              }
-
-              print('Client API response status: ${clientResponse.statusCode}');
-              print('Client API response headers: ${clientResponse.headers}');
-
-              if (clientResponse.statusCode == 200) {
-                final clientData = json.decode(clientResponse.body);
-                print('Client data for clientId $clientId: $clientData');
-                assignment['company_name'] = clientData['company_name'] ?? '';
-                print('Assigned company_name: ${assignment['company_name']}');
-              } else {
-                assignment['company_name'] = '';
-                print(
-                  'Failed to fetch client data for clientId $clientId, status: ${clientResponse.statusCode}',
-                );
-                // If unauthorized, try to refresh token or log out
-                if (clientResponse.statusCode == 401) {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.remove('auth_token');
-                  throw Exception('Session expired');
-                }
-              }
-            } else {
-              assignment['company_name'] = '';
-              print('No client_id found for assignment ${assignment['id']}');
-            }
-          } catch (e) {
-            print(
-              'Error fetching client data for assignment ${assignment['id']}: $e',
-            );
-            assignment['company_name'] = '';
-            // If it's an unauthorized error, propagate it
-            if (e.toString().contains('Session expired')) {
-              throw e;
-            }
+          if (clientResponse?.statusCode == 200) {
+            final clientData = json.decode(clientResponse!.body);
+            assignment['company_name'] = clientData['company_name'] ?? '';
+          } else {
+            assignment['company_name'] = 'Unavailable';
           }
         }
 
-        setState(() {
-          incomeRecords = assignmentsList;
-        });
-      } else if (response.statusCode == 401) {
-        // Clear stored token on 401
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('auth_token');
-        throw Exception('Session expired');
-      } else {
-        throw Exception('Failed to load data: ${response.statusCode}');
+        if (mounted) {
+          setState(() {
+            incomeRecords[i] = assignment;
+          });
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
       }
     } catch (e) {
-      print('Error in fetchRenewals: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
-
-      if (e.toString().contains('Session expired')) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => LoginScreen()),
-        );
-      }
     } finally {
       if (mounted) {
         setState(() {
