@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "485830579569",
+    "project_id": "requrr-27960",
+    "storage_bucket": "requrr-27960.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:485830579569:android:88c9091791bdb95afb12d0",
+        "android_client_info": {
+          "package_name": "com.example.requrr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBu0yFPNiKDMeA_aHMFTHnkIsdJe6wpYns"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
