@@ -56,6 +56,12 @@ class _DashboardState extends State<Dashboard> {
   List<Map<String, dynamic>> selectedCards = [];
   Map<String, dynamic>? selectedCardData;
   late ScrollController _yearScrollController;
+  int? _selectedCardIndex;
+  late PageController _cardPageController;
+  bool _showDetailSidebar = false;
+  bool _sidebarVisible = false;
+
+  List<GlobalKey>? _cardKeys;
 
   String?
   selectedFunctionId; // Track selected function id for showing info card
@@ -108,7 +114,11 @@ class _DashboardState extends State<Dashboard> {
   @override
   void initState() {
     super.initState();
+    _cardPageController = PageController();
     _yearScrollController = ScrollController();
+    if (incomeRecords.isNotEmpty) {
+      _cardKeys = List.generate(incomeRecords.length, (_) => GlobalKey());
+    }
     _initializeToken();
     aToken = widget.token ?? '';
 
@@ -157,6 +167,7 @@ class _DashboardState extends State<Dashboard> {
   void dispose() {
     _pageController.dispose();
     _yearScrollController.dispose();
+    _cardPageController.dispose();
     super.dispose();
   }
 
@@ -386,11 +397,12 @@ class _DashboardState extends State<Dashboard> {
     return sortedMap;
   }
 
+  @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.black, // 🔴 Red status bar
-        statusBarIconBrightness: Brightness.light, // Light icons (optional)
+        statusBarColor: Colors.black,
+        statusBarIconBrightness: Brightness.light,
       ),
     );
 
@@ -398,6 +410,12 @@ class _DashboardState extends State<Dashboard> {
 
     return WillPopScope(
       onWillPop: () async {
+        if (_showDetailSidebar) {
+          setState(() {
+            _showDetailSidebar = false;
+          });
+          return false;
+        }
         if (Platform.isAndroid) {
           SystemNavigator.pop();
         } else {
@@ -405,270 +423,303 @@ class _DashboardState extends State<Dashboard> {
         }
         return false;
       },
-      child: Scaffold(
-        key: _scaffoldKey,
-        backgroundColor: Colors.white,
-        drawer: Sidebar(
-          token: aToken,
-          onYearSelected: (selectedYear) {
-            setState(() {
-              currentMonth = DateTime(selectedYear);
-              isYearView = true;
-              isCalendarVisible = true;
-            });
-            fetchRenewals(date: DateTime(selectedYear), isYearView: true);
-          },
-          onMonthSelected: () {
-            setState(() {
-              isYearView = false;
-              isCalendarVisible = true;
-              // Jump to the page corresponding to currentMonth in the PageView
-              int pageIndex =
-                  (currentMonth.year - _baseYear) * 12 +
-                  (currentMonth.month - 1);
-              _pageController.jumpToPage(pageIndex);
-            });
-            fetchRenewals(date: currentMonth, isYearView: false);
-          },
-          onLogout: () {
-            setState(() {
-              aToken = null;
-              // assignments.clear();
-              selectedDayItems.clear();
-              selectedCards.clear();
-              // assignmentDetails.clear();
-              paymentDetails.clear();
-              // totalAssignments = 0;
-              // totalCost = 0;
-              paymentReceived = 0;
-              duePayment = 0;
-              selectedCardData = null;
-              selectedDateOnlyPicked = false;
-              isCalendarVisible = false;
-              isYearView = false;
-            });
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('You have been logged out')),
-            );
-          },
-        ),
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.menu, color: Colors.black),
-            onPressed: () {
-              _scaffoldKey.currentState?.openDrawer();
-            },
-          ),
-          title: Text(
-            selectedDateOnlyPicked
-                ? DateFormat('dd MMM yyyy').format(selectedDate)
-                : "Upcoming Renewals",
-            style: GoogleFonts.questrial(color: Colors.black, fontSize: 15),
-          ),
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          elevation: isCalendarVisible ? 0 : 4,
-          shadowColor: Colors.grey.withOpacity(0.5),
-          actions: [
-            TextButton(
-              onPressed: () {
+      child: Stack(
+        children: [
+          Scaffold(
+            key: _scaffoldKey,
+            backgroundColor: Colors.white,
+            drawer: Sidebar(
+              token: aToken,
+              onYearSelected: (selectedYear) {
                 setState(() {
-                  isCalendarVisible = !isCalendarVisible;
+                  currentMonth = DateTime(selectedYear);
+                  isYearView = true;
+                  isCalendarVisible = true;
                 });
+                fetchRenewals(date: DateTime(selectedYear), isYearView: true);
               },
-              child: Row(
-                children: [
-                  Text(
-                    isYearView
-                        ? DateFormat("yyyy").format(currentMonth)
-                        : DateFormat("MMM yyyy").format(currentMonth),
-                    style: GoogleFonts.questrial(
-                      color: Colors.black,
-                      fontSize: 15,
+              onMonthSelected: () {
+                setState(() {
+                  isYearView = false;
+                  isCalendarVisible = true;
+                  int pageIndex =
+                      (currentMonth.year - _baseYear) * 12 +
+                      (currentMonth.month - 1);
+                  _pageController.jumpToPage(pageIndex);
+                });
+                fetchRenewals(date: currentMonth, isYearView: false);
+              },
+              onLogout: () {
+                setState(() {
+                  aToken = null;
+                  selectedDayItems.clear();
+                  selectedCards.clear();
+                  paymentDetails.clear();
+                  paymentReceived = 0;
+                  duePayment = 0;
+                  selectedCardData = null;
+                  selectedDateOnlyPicked = false;
+                  isCalendarVisible = false;
+                  isYearView = false;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('You have been logged out')),
+                );
+              },
+            ),
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.menu, color: Colors.black),
+                onPressed: () {
+                  _scaffoldKey.currentState?.openDrawer();
+                },
+              ),
+              title: Text(
+                selectedDateOnlyPicked
+                    ? DateFormat('dd MMM yyyy').format(selectedDate)
+                    : "Upcoming Renewals",
+                style: GoogleFonts.questrial(color: Colors.black, fontSize: 15),
+              ),
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.white,
+              elevation: isCalendarVisible ? 0 : 4,
+              shadowColor: Colors.grey.withOpacity(0.5),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      isCalendarVisible = !isCalendarVisible;
+                    });
+                  },
+                  child: Row(
+                    children: [
+                      Text(
+                        isYearView
+                            ? DateFormat("yyyy").format(currentMonth)
+                            : DateFormat("MMM yyyy").format(currentMonth),
+                        style: GoogleFonts.questrial(
+                          color: Colors.black,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down, color: Colors.black),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            body: Column(
+              children: [
+                if (isCalendarVisible)
+                  isYearView ? _buildYearCalendar() : _buildCalendar(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        if (incomeRecords.isEmpty)
+                          Center(
+                            child: Text(
+                              "No upcoming renewals found",
+                              style: GoogleFonts.questrial(color: Colors.grey),
+                            ),
+                          )
+                        else if (selectedDateOnlyPicked)
+                          Column(
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
+                                child: Text(
+                                  DateFormat(
+                                    'dd MMM yyyy',
+                                  ).format(selectedDate),
+                                  style: GoogleFonts.questrial(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+                              ...incomeRecords
+                                  .where((record) {
+                                    if (record['due_date'] != null) {
+                                      try {
+                                        DateTime dueDate = DateTime.parse(
+                                          record['due_date'],
+                                        );
+                                        return DateFormat(
+                                              'yyyy-MM-dd',
+                                            ).format(dueDate) ==
+                                            DateFormat(
+                                              'yyyy-MM-dd',
+                                            ).format(selectedDate);
+                                      } catch (e) {
+                                        return false;
+                                      }
+                                    }
+                                    return false;
+                                  })
+                                  .map(
+                                    (record) => _renewalsItem(
+                                      record,
+                                      incomeRecords.indexOf(record),
+                                    ),
+                                  )
+                                  .toList(),
+                            ],
+                          )
+                        else if (isYearView)
+                          Column(
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
+                                child: Text(
+                                  'Renewals for $selectedYear',
+                                  style: GoogleFonts.questrial(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+                              ...incomeRecords
+                                  .where((record) {
+                                    if (record['due_date'] != null) {
+                                      try {
+                                        DateTime dueDate = DateTime.parse(
+                                          record['due_date'],
+                                        );
+                                        return dueDate.year == selectedYear;
+                                      } catch (e) {
+                                        return false;
+                                      }
+                                    }
+                                    return false;
+                                  })
+                                  .map(
+                                    (record) => _renewalsItem(
+                                      record,
+                                      incomeRecords.indexOf(record),
+                                    ),
+                                  )
+                                  .toList(),
+                            ],
+                          )
+                        else
+                          ..._groupRenewalsByDate(incomeRecords).entries.expand(
+                            (entry) {
+                              return [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  child: Text(
+                                    entry.key,
+                                    style: GoogleFonts.questrial(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ),
+                                ...entry.value.map(
+                                  (record) => _renewalsItem(
+                                    record,
+                                    incomeRecords.indexOf(record),
+                                  ),
+                                ),
+                              ];
+                            },
+                          ).toList(),
+                      ],
                     ),
                   ),
-                  const Icon(Icons.arrow_drop_down, color: Colors.black),
+                ),
+              ],
+            ),
+            bottomNavigationBar: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: BottomNavigationBar(
+                backgroundColor: Colors.white,
+                currentIndex: 0,
+                selectedItemColor: Colors.black,
+                unselectedItemColor: Colors.grey,
+                selectedLabelStyle: GoogleFonts.questrial(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                unselectedLabelStyle: GoogleFonts.questrial(
+                  fontWeight: FontWeight.normal,
+                  fontSize: 12,
+                ),
+                onTap: (index) {},
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.dashboard),
+                    label: 'Dashboard',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.miscellaneous_services_outlined),
+                    label: 'Services',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.people),
+                    label: 'Clients',
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
-        body: Column(
-          children: [
-            if (isCalendarVisible)
-              isYearView ? _buildYearCalendar() : _buildCalendar(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    if (incomeRecords.isEmpty)
-                      Center(
-                        child: Text(
-                          "No upcoming renewals found",
-                          style: GoogleFonts.questrial(color: Colors.grey),
-                        ),
-                      )
-                    else if (selectedDateOnlyPicked)
-                      // Show renewals for selected date
-                      Column(
-                        children: [
-                          // Date header
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Text(
-                              DateFormat('dd MMM yyyy').format(selectedDate),
-                              style: GoogleFonts.questrial(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                          // Renewals for selected date
-                          ...incomeRecords
-                              .where((record) {
-                                if (record['due_date'] != null) {
-                                  try {
-                                    DateTime dueDate = DateTime.parse(
-                                      record['due_date'],
-                                    );
-                                    return DateFormat(
-                                          'yyyy-MM-dd',
-                                        ).format(dueDate) ==
-                                        DateFormat(
-                                          'yyyy-MM-dd',
-                                        ).format(selectedDate);
-                                  } catch (e) {
-                                    return false;
-                                  }
-                                }
-                                return false;
-                              })
-                              .map((record) => _renewalsItem(record))
-                              .toList(),
-                        ],
-                      )
-                    else if (isYearView)
-                      // Show renewals for selected year
-                      Column(
-                        children: [
-                          // Year header
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Text(
-                              'Renewals for $selectedYear',
-                              style: GoogleFonts.questrial(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                          // Renewals for selected year
-                          ...incomeRecords
-                              .where((record) {
-                                if (record['due_date'] != null) {
-                                  try {
-                                    DateTime dueDate = DateTime.parse(
-                                      record['due_date'],
-                                    );
-                                    return dueDate.year == selectedYear;
-                                  } catch (e) {
-                                    return false;
-                                  }
-                                }
-                                return false;
-                              })
-                              .map((record) => _renewalsItem(record))
-                              .toList(),
-                        ],
-                      )
-                    else
-                      // Default view - show all renewals grouped by date
-                      ..._groupRenewalsByDate(incomeRecords).entries.expand((
-                        entry,
-                      ) {
-                        return [
-                          // Date header
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Text(
-                              entry.key,
-                              style: GoogleFonts.questrial(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                          // Renewals for this date
-                          ...entry.value.map((record) => _renewalsItem(record)),
-                        ];
-                      }).toList(),
-                  ],
+          ),
+          if (_showDetailSidebar)
+            AnimatedOpacity(
+              opacity: _sidebarVisible ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: GestureDetector(
+                onTap: () {
+                  // Start hiding animation
+                  setState(() {
+                    _sidebarVisible = false;
+                  });
+
+                  // Wait for animation to finish before removing the sidebar widget
+                  Future.delayed(const Duration(seconds: 1), () {
+                    if (mounted) {
+                      setState(() {
+                        _showDetailSidebar = false;
+                      });
+                    }
+                  });
+                },
+                child: Container(
+                  color: Colors.black.withOpacity(0.4),
+                  width: double.infinity,
+                  height: double.infinity,
                 ),
               ),
             ),
-          ],
-        ),
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: Offset(0, -2),
-              ),
-            ],
-          ),
-          child: BottomNavigationBar(
-            backgroundColor: Colors.white,
-            currentIndex: 0,
-            selectedItemColor: Colors.black,
-            unselectedItemColor: Colors.grey,
-            selectedLabelStyle: GoogleFonts.questrial(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-            unselectedLabelStyle: GoogleFonts.questrial(
-              fontWeight: FontWeight.normal,
-              fontSize: 12,
-            ),
-            onTap: (index) {
-              // if (index == 1) {
-              //   Navigator.push(
-              //     context,
-              //     MaterialPageRoute(builder: (context) => const Leads()),
-              //   );
-              // }
-            },
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.dashboard),
-                label: 'Dashboard',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.miscellaneous_services_outlined),
-                label: 'Services',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.people),
-                label: 'Clients',
-              ),
-            ],
-          ),
-        ),
+          if (_showDetailSidebar) _buildDetailSidebar(),
+        ],
       ),
     );
   }
 
-  Widget _renewalsItem(dynamic assignment) {
+  Widget _renewalsItem(dynamic assignment, int index) {
     String title = assignment['service_name']?.toString() ?? 'No Service';
     String name =
         assignment['client_name']?.toString() ?? 'Client Name Not Available';
@@ -690,6 +741,9 @@ class _DashboardState extends State<Dashboard> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8), // Space between cards
+      key: _cardKeys != null && index < _cardKeys!.length
+          ? _cardKeys![index]
+          : null,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -706,17 +760,18 @@ class _DashboardState extends State<Dashboard> {
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => NotepadPage(
-                  id: assignment['id'].toString(),
-                  client_name:
-                      assignment['client_name']?.toString() ?? 'No Client Name',
-                  notes: notes,
-                ),
-              ),
-            );
+            setState(() {
+              _selectedCardIndex = index;
+              _showDetailSidebar = true;
+            });
+
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted) {
+                setState(() {
+                  _sidebarVisible = true;
+                });
+              }
+            });
           },
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -810,6 +865,172 @@ class _DashboardState extends State<Dashboard> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDetailSidebar() {
+    if (_selectedCardIndex == null || !_showDetailSidebar)
+      return const SizedBox();
+
+    final assignment = incomeRecords[_selectedCardIndex!];
+
+    int daysUntilRenewal = 0;
+    if (assignment['due_date'] != null) {
+      try {
+        DateTime dueDate = DateTime.parse(assignment['due_date']);
+        DateTime currentDate = DateTime.now();
+        daysUntilRenewal = dueDate.difference(currentDate).inDays;
+      } catch (e) {
+        print("Error parsing date: $e");
+      }
+    }
+
+    double cardTop = 100;
+    if (_cardKeys != null &&
+        _selectedCardIndex != null &&
+        _selectedCardIndex! < _cardKeys!.length &&
+        _cardKeys![_selectedCardIndex!] != null &&
+        _cardKeys![_selectedCardIndex!]!.currentContext != null) {
+      final RenderBox? cardRenderBox =
+          _cardKeys![_selectedCardIndex!]!.currentContext!.findRenderObject()
+              as RenderBox?;
+      cardTop = cardRenderBox?.localToGlobal(Offset.zero).dy ?? 100;
+    }
+
+    return AnimatedPositioned(
+      duration: const Duration(seconds: 1),
+      curve: Curves.easeInOut,
+      right: _sidebarVisible ? 20 : -MediaQuery.of(context).size.width,
+      top: cardTop,
+      child: Material(
+        elevation: 12,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.7,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Renewal Details',
+                        style: GoogleFonts.questrial(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.black87),
+                        onPressed: () {
+                          setState(() {
+                            _sidebarVisible = false;
+                          });
+
+                          Future.delayed(const Duration(seconds: 3), () {
+                            if (mounted) {
+                              setState(() {
+                                _showDetailSidebar = false;
+                              });
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const Divider(thickness: 1),
+
+                  _infoTile("Client", assignment['client_name']),
+                  _infoTile("Company", assignment['company_name']),
+                  _infoTile("Service", assignment['service_name']),
+                  if (assignment['due_date'] != null)
+                    _infoTile(
+                      "Due Date",
+                      DateFormat(
+                        'dd MMM yyyy',
+                      ).format(DateTime.parse(assignment['due_date'])),
+                    ),
+                  _infoTile("Amount", assignment['amount']),
+                  _infoTile("Payment Status", assignment['status']),
+                  _infoTile(
+                    "Notes",
+                    assignment['notes'] ?? 'No notes available',
+                  ),
+
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: daysUntilRenewal <= 7
+                            ? Colors.red
+                            : Colors.black,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$daysUntilRenewal days left',
+                        style: GoogleFonts.questrial(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _infoTile(String title, dynamic value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$title: ',
+            style: GoogleFonts.questrial(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: Colors.black87,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value?.toString() ?? 'N/A',
+              style: GoogleFonts.questrial(fontSize: 15),
+              overflow: TextOverflow.visible,
+            ),
+          ),
+        ],
       ),
     );
   }
