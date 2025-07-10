@@ -9,7 +9,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'addpayment.dart';
 // import 'professional.dart';
-// import 'register.dart';
+import 'services.dart';
 import 'auth_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'clients.dart';
@@ -625,7 +625,15 @@ class _DashboardState extends State<Dashboard> {
                   fontSize: 12,
                 ),
                 onTap: (index) {
-                  if (index == 2) {
+                  if (index == 1) {
+                    // Services tab index
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ServicesPage(token: aToken),
+                      ),
+                    );
+                  } else if (index == 2) {
                     // Clients tab index
                     Navigator.push(
                       context,

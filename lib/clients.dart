@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'sidebar.dart';
 import 'login.dart';
 import 'package:intl/intl.dart';
+import 'services.dart';
 import 'dashboard.dart';
 
 class ClientsPage extends StatefulWidget {
@@ -205,10 +206,28 @@ class _ClientsPageState extends State<ClientsPage> {
           ),
           onTap: (index) {
             if (index == 0) {
-              Navigator.pushReplacement(
+              // Dashboard tab index
+              Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(
                   builder: (context) => Dashboard(token: aToken),
+                ),
+                (route) => false, // This removes all previous routes
+              );
+            } else if (index == 1) {
+              // Services tab index
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ServicesPage(token: aToken),
+                ),
+              );
+            } else if (index == 2) {
+              // Clients tab index
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ClientsPage(token: aToken),
                 ),
               );
             }
