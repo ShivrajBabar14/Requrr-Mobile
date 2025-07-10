@@ -178,9 +178,17 @@ class _ServicesPageState extends State<ServicesPage> {
                     SizedBox(
                       height: MediaQuery.of(context).size.height * 0.8,
                       child: Center(
-                        child: Text(
-                          "No services found",
-                          style: GoogleFonts.questrial(color: Colors.grey),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/noservices.png',
+                              width: 200,
+                              height: 200,
+                              fit: BoxFit.contain,
+                            ),
+                          ],
                         ),
                       ),
                     )
