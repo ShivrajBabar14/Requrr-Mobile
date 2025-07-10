@@ -12,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // import 'register.dart';
 import 'auth_service.dart';
 import 'package:google_fonts/google_fonts.dart';
-// import 'leads.dart';
+import 'clients.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
@@ -624,7 +624,17 @@ class _DashboardState extends State<Dashboard> {
                   fontWeight: FontWeight.normal,
                   fontSize: 12,
                 ),
-                onTap: (index) {},
+                onTap: (index) {
+                  if (index == 2) {
+                    // Clients tab index
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ClientsPage(token: aToken),
+                      ),
+                    );
+                  }
+                },
                 items: const [
                   BottomNavigationBarItem(
                     icon: Icon(Icons.dashboard),

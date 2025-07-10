@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dashboard.dart';
-// import 'leads.dart';
+import 'clients.dart';
 import 'sidebar.dart'; // Import Sidebar widget
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';

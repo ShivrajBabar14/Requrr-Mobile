@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 import 'forgotpassword.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Email and password are required!"),
-          backgroundColor: Colors.blueAccent,
+          backgroundColor: Colors.black,
         ),
       );
       return;
@@ -93,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text("Token not found in response."),
-                  backgroundColor: Colors.blueAccent,
+                  backgroundColor: Colors.black,
                 ),
               );
             }
@@ -101,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text("Invalid response format."),
-                backgroundColor: Colors.blueAccent,
+                backgroundColor: Colors.black,
               ),
             );
           }
@@ -110,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("Error occurred: $e"),
-              backgroundColor: Colors.blueAccent,
+              backgroundColor: Colors.black,
             ),
           );
         }
@@ -119,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Something went wrong. Please try again."),
-            backgroundColor: Colors.blueAccent,
+            backgroundColor: Colors.black,
           ),
         );
       }
@@ -128,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error occurred: $e"),
-          backgroundColor: Colors.blueAccent,
+          backgroundColor: Colors.black,
         ),
       );
     } finally {
@@ -152,8 +151,8 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // blueAccentuced top margin
-              const SizedBox(height: 70), // blueAccentuced space from the top
+              // blackuced top margin
+              const SizedBox(height: 70), // blackuced space from the top
               // Login Title
               Text("Login", style: GoogleFonts.questrial(fontSize: 24)),
 
@@ -172,17 +171,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   labelText: "Email",
                   labelStyle: GoogleFonts.questrial(color: Colors.grey),
                   floatingLabelStyle: GoogleFonts.questrial(
-                    color: Colors.blueAccent,
+                    color: Colors.black,
                   ),
                   focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.blueAccent),
+                    borderSide: BorderSide(color: Colors.black),
                   ),
                   enabledBorder: const UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.grey),
                   ),
-                  hoverColor: Colors.blueAccent,
+                  hoverColor: Colors.black,
                 ),
-                cursorColor: Colors.blueAccent,
+                cursorColor: Colors.black,
               ),
               const SizedBox(height: 20),
 
@@ -211,18 +210,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   labelText: "Password",
                   floatingLabelStyle: GoogleFonts.questrial(
-                    color: Colors.blueAccent,
+                    color: Colors.black,
                   ),
                   labelStyle: GoogleFonts.questrial(color: Colors.grey),
                   focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.blueAccent),
+                    borderSide: BorderSide(color: Colors.black),
                   ),
                   enabledBorder: const UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.grey),
                   ),
-                  hoverColor: Colors.blueAccent,
+                  hoverColor: Colors.black,
                 ),
-                cursorColor: Colors.blueAccent,
+                cursorColor: Colors.black,
               ),
               const SizedBox(height: 40),
 
@@ -231,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
+                    backgroundColor: Colors.black,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
@@ -273,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   child: Text(
                     "Forgot password?",
-                    style: GoogleFonts.questrial(color: Colors.blueAccent),
+                    style: GoogleFonts.questrial(color: Colors.black),
                   ),
                 ),
               ),
