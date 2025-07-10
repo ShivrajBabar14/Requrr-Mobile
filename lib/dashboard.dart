@@ -724,7 +724,10 @@ class _DashboardState extends State<Dashboard> {
       try {
         DateTime dueDate = DateTime.parse(assignment['due_date']);
         DateTime currentDate = DateTime.now();
-        daysUntilRenewal = dueDate.difference(currentDate).inDays;
+        // Calculate difference in days and add 1 to include the current day
+        daysUntilRenewal = dueDate.difference(currentDate).inDays + 1;
+        // Ensure we don't show negative values
+        if (daysUntilRenewal < 0) daysUntilRenewal = 0;
       } catch (e) {
         print("Error parsing date: $e");
       }
@@ -823,7 +826,7 @@ class _DashboardState extends State<Dashboard> {
                           'Amount: $amount',
                           style: GoogleFonts.questrial(
                             color: Colors.black,
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -871,7 +874,10 @@ class _DashboardState extends State<Dashboard> {
       try {
         DateTime dueDate = DateTime.parse(assignment['due_date']);
         DateTime currentDate = DateTime.now();
-        daysUntilRenewal = dueDate.difference(currentDate).inDays;
+        // Calculate difference in days and add 1 to include the current day
+        daysUntilRenewal = dueDate.difference(currentDate).inDays + 1;
+        // Ensure we don't show negative values
+        if (daysUntilRenewal < 0) daysUntilRenewal = 0;
       } catch (e) {
         print("Error parsing date: $e");
       }
