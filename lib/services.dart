@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'login.dart';
 import 'dashboard.dart';
 import 'clients.dart';
+import 'sidebar.dart';
 
 class ServicesPage extends StatefulWidget {
   final String? token;
@@ -169,43 +170,19 @@ class _ServicesPageState extends State<ServicesPage> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(color: Colors.black),
-              child: Text(
-                'Menu',
-                style: GoogleFonts.questrial(color: Colors.white, fontSize: 24),
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.dashboard),
-              title: Text('Dashboard'),
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Dashboard(token: aToken),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.people),
-              title: Text('Clients'),
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ClientsPage(token: aToken),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+      drawer: Sidebar(
+        // Use Sidebar directly as the drawer
+        token: aToken,
+        onYearSelected: (selectedYear) {},
+        onMonthSelected: () {},
+        onLogout: () {
+          setState(() {
+            aToken = null;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('You have been logged out')),
+          );
+        },
       ),
       appBar: AppBar(
         leading: IconButton(
@@ -351,10 +328,6 @@ class _ServicesPageState extends State<ServicesPage> {
               ],
             ),
             const SizedBox(height: 8),
-            _serviceInfoRow(
-              'Description',
-              service['description'] ?? 'No description',
-            ),
             _serviceInfoRow('Billing Type', service['billing_type'] ?? 'N/A'),
             _serviceInfoRow(
               'Billing Interval',
@@ -367,6 +340,10 @@ class _ServicesPageState extends State<ServicesPage> {
             _serviceInfoRow(
               'Status',
               service['is_active'] == 1 ? 'Active' : 'Inactive',
+            ),
+            _serviceInfoRow(
+              'Description',
+              service['description'] ?? 'No description',
             ),
           ],
         ),
