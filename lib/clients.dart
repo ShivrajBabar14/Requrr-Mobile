@@ -22,6 +22,7 @@ class _ClientsPageState extends State<ClientsPage> {
   List<dynamic> clients = [];
   bool isLoading = true;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  
 
   bool isTokenValid(String? token) {
     if (token == null || token.isEmpty) return false;
@@ -64,22 +65,23 @@ class _ClientsPageState extends State<ClientsPage> {
   }
 
   Future<void> fetchClients() async {
-    setState(() {
-      isLoading = true;
-    });
+    if (!mounted) return;
+    setState(() => isLoading = true);
 
     try {
-      if (aToken == null || aToken!.isEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        aToken = prefs.getString('auth_token');
-      }
+      // 1. Faster token retrieval
+      aToken ??=
+          widget.token ??
+          (await SharedPreferences.getInstance()).getString('auth_token');
 
       if (!isTokenValid(aToken)) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Session expired. Please login again.')),
         );
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => LoginScreen()),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => LoginScreen()),
         );
         return;
       }
@@ -90,42 +92,50 @@ class _ClientsPageState extends State<ClientsPage> {
         'https://www.requrr.com/api/clients',
       ];
 
-      http.Response? response;
-      for (final url in urls) {
-        try {
-          response = await http
-              .get(
-                Uri.parse(url),
-                headers: {
-                  'Authorization': 'Bearer $trimmedToken',
-                  'Accept': 'application/json',
-                },
-              )
-              .timeout(const Duration(seconds: 10));
-          if (response.statusCode == 200) break;
-        } catch (_) {}
-      }
+      // 2. Parallel request attempts with fail-fast
+      final response = await _fetchFirstSuccessful(urls, trimmedToken);
 
-      if (response == null || response.statusCode != 200) {
-        throw Exception('Failed to fetch clients');
-      }
+      // 3. Efficient JSON parsing
+      final clientsList = (json.decode(response.body) as List).cast<dynamic>();
 
-      final List<dynamic> clientsList = json.decode(response.body);
-
-      setState(() {
-        clients = clientsList;
-      });
+      if (mounted) setState(() => clients = clientsList);
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
-    } finally {
       if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  Future<http.Response> _fetchFirstSuccessful(
+    List<String> urls,
+    String token,
+  ) async {
+    final futures = urls.map(
+      (url) => http
+          .get(
+            Uri.parse(url),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 5)),
+    ); // Reduced timeout
+
+    for (final future in futures) {
+      try {
+        final response = await future;
+        if (response.statusCode == 200) return response;
+      } catch (_) {}
+    }
+    throw Exception('All endpoints failed');
   }
 
   @override

@@ -60,27 +60,24 @@ class _ServicesPageState extends State<ServicesPage> {
   }
 
   Future<void> fetchServices() async {
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
     try {
       if (aToken == null || aToken!.isEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        aToken = prefs.getString('auth_token');
+        aToken = (await SharedPreferences.getInstance()).getString(
+          'auth_token',
+        );
       }
 
       if (!isTokenValid(aToken)) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Session expired. Please login again.'),
-            ),
-          );
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => LoginScreen()),
-          );
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Session expired. Please login again.')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => LoginScreen()),
+        );
         return;
       }
 
@@ -90,78 +87,45 @@ class _ServicesPageState extends State<ServicesPage> {
         'https://www.requrr.com/api/Services',
       ];
 
-      http.Response? response;
-
-      for (final url in urls) {
-        try {
-          print('Trying to fetch from: $url'); // Debug print
-          response = await http
+      // 1. Use Future.wait for parallel requests
+      final responses = await Future.wait(
+        urls.map(
+          (url) => http
               .get(
                 Uri.parse(url),
                 headers: {
                   'Authorization': 'Bearer $trimmedToken',
                   'Accept': 'application/json',
-                  'Content-Type': 'application/json',
                 },
               )
-              .timeout(const Duration(seconds: 10));
+              .timeout(const Duration(seconds: 5)),
+        ), // Reduced timeout
+        eagerError: true, // Fail fast if any request fails
+      );
 
-          print('Response status: ${response.statusCode}'); // Debug print
-          if (response.statusCode == 200) {
-            break;
-          }
-        } catch (e) {
-          print('Error fetching from $url: $e'); // Debug print
-        }
-      }
+      // 2. Find first successful response
+      final response = responses.firstWhere(
+        (r) => r.statusCode == 200,
+        orElse: () => throw Exception('All endpoints failed'),
+      );
 
-      if (response == null) {
-        throw Exception('All API endpoints failed');
-      }
-
-      if (response.statusCode != 200) {
-        throw Exception(
-          'Failed to fetch services. Status: ${response.statusCode}\n'
-          'Please check the API endpoint and your internet connection.',
-        );
-      }
-
-      final responseBody = response.body;
-      if (responseBody.isEmpty) {
-        throw Exception('Empty response received from server');
-      }
-
-      final List<dynamic> servicesList;
-      try {
-        servicesList = json.decode(responseBody);
-        print(
-          'Successfully fetched ${servicesList.length} services',
-        ); // Debug print
-      } catch (e) {
-        throw Exception('Failed to parse JSON: ${e.toString()}');
-      }
+      // 3. Optimized JSON parsing
+      final servicesList = (json.decode(response.body) as List).cast<dynamic>();
 
       if (mounted) {
-        setState(() {
-          services = servicesList;
-        });
+        setState(() => services = servicesList);
       }
     } catch (e) {
-      print('Error in fetchServices: $e'); // Debug print
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            duration: const Duration(seconds: 5),
+            content: Text(e.toString().replaceAll(RegExp(r'^Exception: '), '')),
+            duration: const Duration(seconds: 3), // Shorter error display
           ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
