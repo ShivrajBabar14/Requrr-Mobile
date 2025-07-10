@@ -22,7 +22,6 @@ class _ClientsPageState extends State<ClientsPage> {
   List<dynamic> clients = [];
   bool isLoading = true;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  
 
   bool isTokenValid(String? token) {
     if (token == null || token.isEmpty) return false;
@@ -172,24 +171,31 @@ class _ClientsPageState extends State<ClientsPage> {
         elevation: 4,
         shadowColor: Colors.grey.withOpacity(0.5),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            if (isLoading)
-              const Center(child: CircularProgressIndicator())
-            else if (clients.isEmpty)
-              Center(
-                child: Text(
-                  "No clients found",
-                  style: GoogleFonts.questrial(color: Colors.grey),
-                ),
-              )
-            else
-              ...clients.map((client) => _clientCard(client)).toList(),
-          ],
-        ),
-      ),
+      body: isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: Colors.black, // Simplified version for Flutter 2.0+
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  if (clients.isEmpty)
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.8,
+                      child: Center(
+                        child: Text(
+                          "No clients found",
+                          style: GoogleFonts.questrial(color: Colors.grey),
+                        ),
+                      ),
+                    )
+                  else
+                    ...clients.map((service) => _clientCard(service)).toList(),
+                ],
+              ),
+            ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,

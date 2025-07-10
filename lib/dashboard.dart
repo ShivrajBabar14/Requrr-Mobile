@@ -469,134 +469,151 @@ class _DashboardState extends State<Dashboard> {
                 if (isCalendarVisible)
                   isYearView ? _buildYearCalendar() : _buildCalendar(),
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        if (incomeRecords.isEmpty)
-                          Center(
-                            child: Text(
-                              "No upcoming renewals found",
-                              style: GoogleFonts.questrial(color: Colors.grey),
+                  child: isLoading
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.black,
                             ),
-                          )
-                        else if (selectedDateOnlyPicked)
-                          Column(
+                          ),
+                        )
+                      : incomeRecords.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                                child: Text(
-                                  DateFormat(
-                                    'dd MMM yyyy',
-                                  ).format(selectedDate),
-                                  style: GoogleFonts.questrial(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                  ),
-                                ),
+                              Image.asset(
+                                'assets/norenewals.png',
+                                width: 200,
+                                height: 200,
+                                fit: BoxFit.contain,
                               ),
-                              ...incomeRecords
-                                  .where((record) {
-                                    if (record['due_date'] != null) {
-                                      try {
-                                        DateTime dueDate = DateTime.parse(
-                                          record['due_date'],
-                                        );
-                                        return DateFormat(
-                                              'yyyy-MM-dd',
-                                            ).format(dueDate) ==
-                                            DateFormat(
-                                              'yyyy-MM-dd',
-                                            ).format(selectedDate);
-                                      } catch (e) {
-                                        return false;
-                                      }
-                                    }
-                                    return false;
-                                  })
-                                  .map(
-                                    (record) => _renewalsItem(
-                                      record,
-                                      incomeRecords.indexOf(record),
-                                    ),
-                                  )
-                                  .toList(),
                             ],
-                          )
-                        else if (isYearView)
-                          Column(
+                          ),
+                        )
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
                             children: [
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                                child: Text(
-                                  'Renewals for $selectedYear',
-                                  style: GoogleFonts.questrial(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ),
-                              ...incomeRecords
-                                  .where((record) {
-                                    if (record['due_date'] != null) {
-                                      try {
-                                        DateTime dueDate = DateTime.parse(
-                                          record['due_date'],
-                                        );
-                                        return dueDate.year == selectedYear;
-                                      } catch (e) {
-                                        return false;
-                                      }
-                                    }
-                                    return false;
-                                  })
-                                  .map(
-                                    (record) => _renewalsItem(
-                                      record,
-                                      incomeRecords.indexOf(record),
+                              if (selectedDateOnlyPicked)
+                                Column(
+                                  children: [
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
+                                      child: Text(
+                                        DateFormat(
+                                          'dd MMM yyyy',
+                                        ).format(selectedDate),
+                                        style: GoogleFonts.questrial(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                        ),
+                                      ),
                                     ),
-                                  )
-                                  .toList(),
+                                    ...incomeRecords
+                                        .where((record) {
+                                          if (record['due_date'] != null) {
+                                            try {
+                                              DateTime dueDate = DateTime.parse(
+                                                record['due_date'],
+                                              );
+                                              return DateFormat(
+                                                    'yyyy-MM-dd',
+                                                  ).format(dueDate) ==
+                                                  DateFormat(
+                                                    'yyyy-MM-dd',
+                                                  ).format(selectedDate);
+                                            } catch (e) {
+                                              return false;
+                                            }
+                                          }
+                                          return false;
+                                        })
+                                        .map(
+                                          (record) => _renewalsItem(
+                                            record,
+                                            incomeRecords.indexOf(record),
+                                          ),
+                                        )
+                                        .toList(),
+                                  ],
+                                )
+                              else if (isYearView)
+                                Column(
+                                  children: [
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
+                                      child: Text(
+                                        'Renewals for $selectedYear',
+                                        style: GoogleFonts.questrial(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                    ...incomeRecords
+                                        .where((record) {
+                                          if (record['due_date'] != null) {
+                                            try {
+                                              DateTime dueDate = DateTime.parse(
+                                                record['due_date'],
+                                              );
+                                              return dueDate.year ==
+                                                  selectedYear;
+                                            } catch (e) {
+                                              return false;
+                                            }
+                                          }
+                                          return false;
+                                        })
+                                        .map(
+                                          (record) => _renewalsItem(
+                                            record,
+                                            incomeRecords.indexOf(record),
+                                          ),
+                                        )
+                                        .toList(),
+                                  ],
+                                )
+                              else
+                                ..._groupRenewalsByDate(
+                                  incomeRecords,
+                                ).entries.expand(
+                                  (entry) => [
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
+                                      child: Text(
+                                        entry.key,
+                                        style: GoogleFonts.questrial(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                    ...entry.value.map(
+                                      (record) => _renewalsItem(
+                                        record,
+                                        incomeRecords.indexOf(record),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                             ],
-                          )
-                        else
-                          ..._groupRenewalsByDate(incomeRecords).entries.expand(
-                            (entry) {
-                              return [
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                  ),
-                                  child: Text(
-                                    entry.key,
-                                    style: GoogleFonts.questrial(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ),
-                                ...entry.value.map(
-                                  (record) => _renewalsItem(
-                                    record,
-                                    incomeRecords.indexOf(record),
-                                  ),
-                                ),
-                              ];
-                            },
-                          ).toList(),
-                      ],
-                    ),
-                  ),
+                          ),
+                        ),
                 ),
               ],
             ),

@@ -164,24 +164,33 @@ class _ServicesPageState extends State<ServicesPage> {
         elevation: 4,
         shadowColor: Colors.grey.withOpacity(0.5),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            if (isLoading)
-              const Center(child: CircularProgressIndicator())
-            else if (services.isEmpty)
-              Center(
-                child: Text(
-                  "No services found",
-                  style: GoogleFonts.questrial(color: Colors.grey),
-                ),
-              )
-            else
-              ...services.map((service) => _serviceCard(service)).toList(),
-          ],
-        ),
-      ),
+      body: isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: Colors.black, // Simplified version for Flutter 2.0+
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  if (services.isEmpty)
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.8,
+                      child: Center(
+                        child: Text(
+                          "No services found",
+                          style: GoogleFonts.questrial(color: Colors.grey),
+                        ),
+                      ),
+                    )
+                  else
+                    ...services
+                        .map((service) => _serviceCard(service))
+                        .toList(),
+                ],
+              ),
+            ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
