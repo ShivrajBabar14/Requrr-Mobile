@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'login.dart';
 import 'dashboard.dart';
 import 'clients.dart';
@@ -256,16 +255,169 @@ class _ServicesPageState extends State<ServicesPage> {
     );
   }
 
+  // Widget _serviceCard(dynamic service) {
+  //   final bool isActive = service['is_active'] == 1;
+  //   final Color statusColor = isActive ? Colors.green : Colors.grey;
+
+  //   return Container(
+  //     margin: const EdgeInsets.only(bottom: 8),
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       borderRadius: BorderRadius.circular(8),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withOpacity(0.1),
+  //           blurRadius: 6,
+  //           offset: const Offset(0, 3),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Padding(
+  //       padding: const EdgeInsets.all(12.0),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           // Name, Status, and Edit icon row
+  //           SizedBox(
+  //             height: 20,
+  //             child: Row(
+  //               children: [
+  //                 Expanded(
+  //                   child: Align(
+  //                     alignment: Alignment.centerLeft,
+  //                     child: Text(
+  //                       service['name']?.toString() ?? 'No Name',
+  //                       style: GoogleFonts.questrial(
+  //                         fontSize: 16,
+  //                         fontWeight: FontWeight.bold,
+  //                         color: Colors.black,
+  //                       ),
+  //                       maxLines: 1,
+  //                       overflow: TextOverflow.ellipsis,
+  //                     ),
+  //                   ),
+  //                 ),
+  //                 // Status badge
+  //                 Container(
+  //                   padding: const EdgeInsets.symmetric(
+  //                     horizontal: 8,
+  //                     vertical: 2,
+  //                   ),
+  //                   decoration: BoxDecoration(
+  //                     color: statusColor.withOpacity(0.2),
+  //                     borderRadius: BorderRadius.circular(10),
+  //                   ),
+  //                   child: Text(
+  //                     isActive ? 'Active' : 'Inactive',
+  //                     style: GoogleFonts.questrial(
+  //                       fontSize: 12,
+  //                       color: statusColor,
+  //                       fontWeight: FontWeight.bold,
+  //                     ),
+  //                   ),
+  //                 ),
+  //                 const SizedBox(width: 10),
+  //                 // Edit icon
+  //                 GestureDetector(
+  //                   onTap: () {
+  //                     // Add edit functionality here
+  //                   },
+  //                   child: const Icon(Icons.edit, size: 15, color: Colors.grey),
+  //                 ),
+  //                 const SizedBox(width: 10),
+  //                 // Delete icon
+  //                 GestureDetector(
+  //                   onTap: () {
+  //                     // Add delete functionality here
+  //                   },
+  //                   child: const Icon(
+  //                     Icons.delete,
+  //                     size: 15,
+  //                     color: Colors.redAccent,
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+
+  //           // Description
+  //           if (service['description'] != null &&
+  //               service['description'].toString().isNotEmpty)
+  //             Padding(
+  //               padding: const EdgeInsets.only(top: 2, bottom: 4, right: 100),
+  //               child: Text(
+  //                 service['description'].toString(),
+  //                 style: GoogleFonts.questrial(
+  //                   fontSize: 14,
+  //                   color: Colors.grey[600],
+  //                 ),
+  //               ),
+  //             ),
+
+  //           // Details row
+  //           Row(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               // Left column (unchanged)
+  //               Expanded(
+  //                 child: Column(
+  //                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                   children: [
+  //                     _buildInfoRow(
+  //                       'Service Type',
+  //                       service['billing_type'] ?? 'N/A',
+  //                     ),
+  //                     const SizedBox(height: 4),
+  //                     _buildInfoRow(
+  //                       'Billing Interval',
+  //                       '${service['billing_interval']?.toString() ?? 'N/A'} months',
+  //                     ),
+  //                   ],
+  //                 ),
+  //               ),
+
+  //               // Right column with highlighted price
+  //               Column(
+  //                 crossAxisAlignment: CrossAxisAlignment.start,
+  //                 children: [
+  //                   RichText(
+  //                     text: TextSpan(
+  //                       style: GoogleFonts.questrial(
+  //                         fontSize: 14,
+  //                         color: Colors.black,
+  //                       ),
+  //                       children: [
+  //                         TextSpan(
+  //                           // text: 'Base Price: ',
+  //                           style: TextStyle(
+  //                             color: Colors.grey[600],
+  //                             fontSize: 12,
+  //                           ),
+  //                         ),
+  //                         TextSpan(
+  //                           text:
+  //                               '₹${service['base_price']?.toString() ?? '0.00'}',
+  //                           style: TextStyle(
+  //                             fontWeight: FontWeight.bold,
+  //                             fontSize: 15,
+  //                           ),
+  //                         ),
+  //                       ],
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ],
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+
   Widget _serviceCard(dynamic service) {
-    String formattedDate = '';
-    if (service['created_at'] != null) {
-      try {
-        DateTime createdAt = DateTime.parse(service['created_at']);
-        formattedDate = DateFormat('dd MMM yyyy').format(createdAt);
-      } catch (e) {
-        formattedDate = 'Invalid date';
-      }
-    }
+    final bool isActive = service['is_active'] == 1;
+    final Color statusColor = isActive ? Colors.green : Colors.grey;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -285,8 +437,8 @@ class _ServicesPageState extends State<ServicesPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Top row with name and status/action icons
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Text(
@@ -296,35 +448,101 @@ class _ServicesPageState extends State<ServicesPage> {
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (formattedDate.isNotEmpty)
-                  Text(
-                    formattedDate,
+                // Status badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    isActive ? 'Active' : 'Inactive',
                     style: GoogleFonts.questrial(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                ),
+                const SizedBox(width: 10),
+                // Edit icon
+                GestureDetector(
+                  onTap: () {
+                    // Add edit functionality here
+                  },
+                  child: const Icon(Icons.edit, size: 15, color: Colors.grey),
+                ),
+                const SizedBox(width: 10),
+                // Delete icon
+                GestureDetector(
+                  onTap: () {
+                    // Add delete functionality here
+                  },
+                  child: const Icon(
+                    Icons.delete,
+                    size: 15,
+                    color: Colors.redAccent,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            _serviceInfoRow('Billing Type', service['billing_type'] ?? 'N/A'),
-            _serviceInfoRow(
-              'Billing Interval',
-              '${service['billing_interval']?.toString() ?? 'N/A'} months',
+
+            // Description and Price row
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child:
+                        service['description'] != null &&
+                            service['description'].toString().isNotEmpty
+                        ? Text(
+                            service['description'].toString(),
+                            style: GoogleFonts.questrial(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          )
+                        : const SizedBox(),
+                  ),
+                  Text(
+                    '₹${service['base_price']?.toString() ?? '0.00'}',
+                    style: GoogleFonts.questrial(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            _serviceInfoRow(
-              'Base Price',
-              '₹${service['base_price']?.toString() ?? '0.00'}',
-            ),
-            _serviceInfoRow(
-              'Status',
-              service['is_active'] == 1 ? 'Active' : 'Inactive',
-            ),
-            _serviceInfoRow(
-              'Description',
-              service['description'] ?? 'No description',
+
+            // Service details row (service type and billing interval in one row)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildInfoRow(
+                    'Service Type',
+                    service['billing_type'] ?? 'N/A',
+                  ),
+                ),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: _buildInfoRow(
+                      'Billing Interval',
+                      '${service['billing_interval']?.toString() ?? 'N/A'} months',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -332,23 +550,16 @@ class _ServicesPageState extends State<ServicesPage> {
     );
   }
 
-  Widget _serviceInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildInfoRow(String label, String value) {
+    return RichText(
+      text: TextSpan(
+        style: GoogleFonts.questrial(fontSize: 14, color: Colors.black),
         children: [
-          Text(
-            '$label: ',
-            style: GoogleFonts.questrial(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              color: Colors.black87,
-            ),
+          TextSpan(
+            text: '$label: ',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
           ),
-          Expanded(
-            child: Text(value, style: GoogleFonts.questrial(fontSize: 12)),
-          ),
+          TextSpan(text: value),
         ],
       ),
     );

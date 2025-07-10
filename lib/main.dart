@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Required for SystemChrome
 // import 'package:intl/date_symbol_data_local.dart';
 import 'register.dart';
-import 'bottomnavigator.dart';
 import 'dashboard.dart';
 import 'login.dart';
 
@@ -54,7 +53,6 @@ class AppRoot extends StatelessWidget {
       ),
       routes: {
         '/register': (context) => Registration(),
-        '/bottomnavigator': (context) => const BottomNav(),
         '/login': (context) => const LoginScreen(),
       },
 
