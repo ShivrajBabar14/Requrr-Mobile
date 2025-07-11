@@ -1570,17 +1570,23 @@ class _ServicesPageState extends State<ServicesPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child:
-                        service['description'] != null &&
-                            service['description'].toString().isNotEmpty
-                        ? Text(
-                            service['description'].toString(),
-                            style: GoogleFonts.questrial(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          )
-                        : const SizedBox(),
+                    child: Padding(
+                      // Wrap this with Padding widget
+                      padding: const EdgeInsets.only(
+                        right: 15,
+                      ), // Optional: add any padding as needed
+                      child:
+                          service['description'] != null &&
+                              service['description'].toString().isNotEmpty
+                          ? Text(
+                              service['description'].toString(),
+                              style: GoogleFonts.questrial(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            )
+                          : const SizedBox(),
+                    ),
                   ),
                   Text(
                     '₹${service['base_price']?.toString() ?? '0.00'}',

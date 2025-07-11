@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'sidebar.dart';
 import 'login.dart';
-import 'package:intl/intl.dart';
 import 'services.dart';
 import 'dashboard.dart';
 
@@ -275,16 +274,6 @@ class _ClientsPageState extends State<ClientsPage> {
   }
 
   Widget _clientCard(dynamic client) {
-    String formattedDate = '';
-    if (client['created_at'] != null) {
-      try {
-        DateTime createdAt = DateTime.parse(client['created_at']);
-        formattedDate = DateFormat('dd MMM yyyy').format(createdAt);
-      } catch (e) {
-        formattedDate = 'Invalid date';
-      }
-    }
-
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -303,8 +292,31 @@ class _ClientsPageState extends State<ClientsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Row(
+            //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //   children: [
+            //     Expanded(
+            //       child: Text(
+            //         client['name']?.toString() ?? 'No Name',
+            //         style: GoogleFonts.questrial(
+            //           fontSize: 16,
+            //           fontWeight: FontWeight.bold,
+            //           color: Colors.black,
+            //         ),
+            //       ),
+            //     ),
+            //     if (formattedDate.isNotEmpty)
+            //       Text(
+            //         formattedDate,
+            //         style: GoogleFonts.questrial(
+            //           fontSize: 12,
+            //           color: Colors.grey[600],
+            //         ),
+            //       ),
+            //   ],
+            // ),
+
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Text(
@@ -314,16 +326,26 @@ class _ClientsPageState extends State<ClientsPage> {
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (formattedDate.isNotEmpty)
-                  Text(
-                    formattedDate,
-                    style: GoogleFonts.questrial(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                
+                const SizedBox(width: 10),
+                GestureDetector(
+                  // onTap: () => _showEditServiceDialog(service),
+                  child: const Icon(Icons.edit, size: 15, color: Colors.grey),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  // onTap: () =>
+                  //     _showDeleteConfirmationDialog(serviceName, serviceId),
+                  child: const Icon(
+                    Icons.delete,
+                    size: 15,
+                    color: Colors.redAccent,
                   ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
