@@ -21,6 +21,7 @@ class _ClientsPageState extends State<ClientsPage> {
   List<dynamic> clients = [];
   bool isLoading = true;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  Map<int, bool> expandedClients = {}; // Track which clients are expanded
 
   bool isTokenValid(String? token) {
     if (token == null || token.isEmpty) return false;
@@ -67,7 +68,6 @@ class _ClientsPageState extends State<ClientsPage> {
     setState(() => isLoading = true);
 
     try {
-      // 1. Faster token retrieval
       aToken ??=
           widget.token ??
           (await SharedPreferences.getInstance()).getString('auth_token');
@@ -90,13 +90,16 @@ class _ClientsPageState extends State<ClientsPage> {
         'https://www.requrr.com/api/clients',
       ];
 
-      // 2. Parallel request attempts with fail-fast
       final response = await _fetchFirstSuccessful(urls, trimmedToken);
-
-      // 3. Efficient JSON parsing
       final clientsList = (json.decode(response.body) as List).cast<dynamic>();
 
-      if (mounted) setState(() => clients = clientsList);
+      if (mounted) {
+        setState(() {
+          clients = clientsList;
+          // Initialize all clients as not expanded
+          expandedClients = {for (var i = 0; i < clientsList.length; i++) i: false};
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -125,7 +128,7 @@ class _ClientsPageState extends State<ClientsPage> {
             },
           )
           .timeout(const Duration(seconds: 5)),
-    ); // Reduced timeout
+    );
 
     for (final future in futures) {
       try {
@@ -134,6 +137,12 @@ class _ClientsPageState extends State<ClientsPage> {
       } catch (_) {}
     }
     throw Exception('All endpoints failed');
+  }
+
+  void _toggleExpand(int index) {
+    setState(() {
+      expandedClients[index] = !(expandedClients[index] ?? false);
+    });
   }
 
   @override
@@ -173,7 +182,7 @@ class _ClientsPageState extends State<ClientsPage> {
       body: isLoading
           ? Center(
               child: CircularProgressIndicator(
-                color: Colors.black, // Simplified version for Flutter 2.0+
+                color: Colors.black,
               ),
             )
           : SingleChildScrollView(
@@ -199,7 +208,11 @@ class _ClientsPageState extends State<ClientsPage> {
                       ),
                     )
                   else
-                    ...clients.map((service) => _clientCard(service)).toList(),
+                    ...clients.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final client = entry.value;
+                      return _clientAccordion(index, client);
+                    }).toList(),
                 ],
               ),
             ),
@@ -229,16 +242,14 @@ class _ClientsPageState extends State<ClientsPage> {
           ),
           onTap: (index) {
             if (index == 0) {
-              // Dashboard tab index
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(
                   builder: (context) => Dashboard(token: aToken),
                 ),
-                (route) => false, // This removes all previous routes
+                (route) => false,
               );
             } else if (index == 1) {
-              // Services tab index
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -246,7 +257,6 @@ class _ClientsPageState extends State<ClientsPage> {
                 ),
               );
             } else if (index == 2) {
-              // Clients tab index
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -271,7 +281,9 @@ class _ClientsPageState extends State<ClientsPage> {
     );
   }
 
-  Widget _clientCard(dynamic client) {
+  Widget _clientAccordion(int index, dynamic client) {
+    final isExpanded = expandedClients[index] ?? false;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -285,54 +297,68 @@ class _ClientsPageState extends State<ClientsPage> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        children: [
+          // Header row with client name and expand icon
+          ListTile(
+            title: Text(
+              client['name']?.toString() ?? 'No Name',
+              style: GoogleFonts.questrial(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Text(
-                    client['name']?.toString() ?? 'No Name',
-                    style: GoogleFonts.questrial(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                IconButton(
+                  icon: Icon(
+                    isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.black,
                   ),
+                  onPressed: () => _toggleExpand(index),
                 ),
-
-                const SizedBox(width: 10),
+                const SizedBox(width: 4),
                 GestureDetector(
-                  // onTap: () => _showEditServiceDialog(service),
-                  child: const Icon(Icons.edit, size: 15, color: Colors.grey),
+                  onTap: () {}, // Edit functionality
+                  child: const Icon(Icons.edit, size: 18, color: Colors.grey),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 GestureDetector(
-                  // onTap: () =>
-                  //     _showDeleteConfirmationDialog(serviceName, serviceId),
+                  onTap: () {}, // Delete functionality
                   child: const Icon(
                     Icons.delete,
-                    size: 15,
+                    size: 18,
                     color: Colors.redAccent,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            _clientInfoRow(
-              Icons.business,
-              client['company_name'] ?? 'No Company',
+            onTap: () => _toggleExpand(index),
+          ),
+          
+          // Expanded content
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Column(
+                children: [
+                  _clientInfoRow(
+                    Icons.business,
+                    client['company_name'] ?? 'No Company',
+                  ),
+                  _clientInfoRow(Icons.email, client['email'] ?? 'No Email'),
+                  _clientInfoRow(Icons.phone, client['phone'] ?? 'No Phone'),
+                  if (client['address'] != null && client['address'].isNotEmpty)
+                    _clientInfoRow(Icons.location_on, client['address']),
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
-            _clientInfoRow(Icons.email, client['email'] ?? 'No Email'),
-            _clientInfoRow(Icons.phone, client['phone'] ?? 'No Phone'),
-            if (client['address'] != null && client['address'].isNotEmpty)
-              _clientInfoRow(Icons.location_on, client['address']),
-          ],
-        ),
+        ],
       ),
     );
   }
