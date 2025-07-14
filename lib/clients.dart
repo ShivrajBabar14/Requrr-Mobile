@@ -274,7 +274,7 @@ class _ClientsPageState extends State<ClientsPage> {
     }
   }
 
-  Future<void> _saveClientChanges(dynamic clientId) async {
+  Future<void> _saveClientChanges(dynamic clientId, BuildContext dialogContext) async {
     try {
       if (!mounted) return;
 
@@ -339,7 +339,7 @@ class _ClientsPageState extends State<ClientsPage> {
           await fetchClients();
 
           // Only close the dialog
-          Navigator.of(context).pop();
+          Navigator.of(dialogContext).pop();
         }
       } else {
         final errorMessage = responseData is Map<String, dynamic>
@@ -725,7 +725,7 @@ class _ClientsPageState extends State<ClientsPage> {
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return Dialog(
           insetPadding: EdgeInsets.symmetric(
             // Add this for better control
@@ -794,7 +794,7 @@ class _ClientsPageState extends State<ClientsPage> {
                       const SizedBox(width: 16),
                       ElevatedButton(
                         onPressed: () {
-                          _saveClientChanges(client['id']);
+                          _saveClientChanges(client['id'], dialogContext);
                           Navigator.of(context).pop();
                         },
                         style: ElevatedButton.styleFrom(
