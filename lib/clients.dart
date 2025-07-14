@@ -199,9 +199,7 @@ class _ClientsPageState extends State<ClientsPage> {
                       ),
                     )
                   else
-                    ...clients
-                        .map((service) => _clientCard(service))
-                        .toList(),
+                    ...clients.map((service) => _clientCard(service)).toList(),
                 ],
               ),
             ),
@@ -292,30 +290,6 @@ class _ClientsPageState extends State<ClientsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Row(
-            //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            //   children: [
-            //     Expanded(
-            //       child: Text(
-            //         client['name']?.toString() ?? 'No Name',
-            //         style: GoogleFonts.questrial(
-            //           fontSize: 16,
-            //           fontWeight: FontWeight.bold,
-            //           color: Colors.black,
-            //         ),
-            //       ),
-            //     ),
-            //     if (formattedDate.isNotEmpty)
-            //       Text(
-            //         formattedDate,
-            //         style: GoogleFonts.questrial(
-            //           fontSize: 12,
-            //           color: Colors.grey[600],
-            //         ),
-            //       ),
-            //   ],
-            // ),
-
             Row(
               children: [
                 Expanded(
@@ -330,7 +304,7 @@ class _ClientsPageState extends State<ClientsPage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                
+
                 const SizedBox(width: 10),
                 GestureDetector(
                   // onTap: () => _showEditServiceDialog(service),

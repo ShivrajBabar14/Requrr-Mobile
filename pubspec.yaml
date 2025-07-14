@@ -81,3 +81,6 @@ flutter:
   - assets/norenewals.png
   - assets/noservices.png
   - assets/noclient.png
+  - assets/logo.png
+  - assets/Login.svg
+  - assets/Logout.svg

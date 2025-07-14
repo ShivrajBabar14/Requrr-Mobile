@@ -3,18 +3,18 @@ import 'package:intl/intl.dart';
 import 'sidebar.dart';
 // import 'addassignment.dart';
 // import 'details.dart';
-import 'notepad.dart';
+// import 'notepad.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'addpayment.dart';
 // import 'professional.dart';
 import 'services.dart';
-import 'auth_service.dart';
+// import 'auth_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'clients.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
+// import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'login.dart';
 // import 'package:flutter/services.dart';
@@ -362,7 +362,7 @@ class _DashboardState extends State<Dashboard> {
       ),
     );
 
-    final groupedRenewals = _groupRenewalsByDate(incomeRecords);
+    // final groupedRenewals = _groupRenewalsByDate(incomeRecords);
 
     return WillPopScope(
       onWillPop: () async {
@@ -714,7 +714,7 @@ class _DashboardState extends State<Dashboard> {
     String title = assignment['service_name']?.toString() ?? 'No Service';
     String name =
         assignment['client_name']?.toString() ?? 'Client Name Not Available';
-    String notes = assignment['notes']?.toString() ?? 'No Notes';
+    // String notes = assignment['notes']?.toString() ?? 'No Notes';
     int daysUntilRenewal = 0;
     String amount = assignment['amount']?.toString() ?? 'No Amount';
     bool noPaymentAdded =

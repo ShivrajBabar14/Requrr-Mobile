@@ -78,7 +78,8 @@ class _SidebarState extends State<Sidebar> {
 
       setState(() {
         this.token = token;
-        userName = userData["name"] ??
+        userName =
+            userData["name"] ??
             decodedToken['name'] ??
             decodedToken['username'] ??
             decodedToken['email'] ??
@@ -215,32 +216,7 @@ class _SidebarState extends State<Sidebar> {
                           Navigator.pushNamed(context, "/assignment");
                         },
                       ),
-                      _buildDrawerItem(
-                        context,
-                        // Icons.calendar_today,
-                        null,
-                        "Year",
-                        onTap: () {
-                          Navigator.pop(context); // Close the sidebar
-                          if (widget.onYearSelected != null) {
-                            widget.onYearSelected!(
-                              DateTime.now().year,
-                            ); // Pass current year
-                          }
-                        },
-                      ),
-                      _buildDrawerItem(
-                        context,
-                        // Icons.date_range,
-                        null,
-                        "Month",
-                        onTap: () {
-                          Navigator.pop(context); // Close the sidebar
-                          if (widget.onMonthSelected != null) {
-                            widget.onMonthSelected!();
-                          }
-                        },
-                      ),
+
                       if (userPlan == 'Basic') ...[
                         _buildDrawerItem(
                           context,
@@ -398,102 +374,108 @@ class _SidebarState extends State<Sidebar> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String? userName, String? userPlan) {
-  String avatarUrl;
+  Widget _buildHeader(
+    BuildContext context,
+    String? userName,
+    String? userPlan,
+  ) {
+    String avatarUrl;
 
-  // Ensure avatarUrl is always assigned
-  if (profileImage != null && profileImage!.isNotEmpty) {
-    avatarUrl = profileImage!;
-  } else if (userEmail != null && userEmail!.contains('@gmail.com')) {
-    // Use UI Avatars based on userName
-    final initials = (userName ?? 'U')
-        .split(' ')
-        .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
-        .join();
-    avatarUrl =
-        'https://ui-avatars.com/api/?name=$initials&background=de512e&color=fff';
-  } else {
-    avatarUrl = 'https://via.placeholder.com/150';
-  }
+    // Ensure avatarUrl is always assigned
+    if (profileImage != null && profileImage!.isNotEmpty) {
+      avatarUrl = profileImage!;
+    } else if (userEmail != null && userEmail!.contains('@gmail.com')) {
+      // Use UI Avatars based on userName
+      final initials = (userName ?? 'U')
+          .split(' ')
+          .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+          .join();
+      avatarUrl =
+          'https://ui-avatars.com/api/?name=$initials&background=de512e&color=fff';
+    } else {
+      avatarUrl = 'https://via.placeholder.com/150';
+    }
 
-  return Container(
-    width: double.infinity,
-    decoration: const BoxDecoration(color: Colors.blueAccent),
-    child: Stack(
-      children: [
-        Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 204),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color.fromARGB(255, 98, 179, 250), Color.fromARGB(255, 0, 106, 255)
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(color: Colors.blueAccent),
+      child: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 204),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color.fromARGB(255, 255, 255, 255),
+                  Color.fromARGB(255, 0, 0, 0),
+                ],
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 45),
+                GestureDetector(
+                  onTap: () {
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (context) => MyAccountPage(),
+                    //   ),
+                    // );
+                  },
+                  child: CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white,
+                    backgroundImage: NetworkImage(avatarUrl),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  userName ?? "User",
+                  style: GoogleFonts.questrial(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (userEmail != null)
+                  Text(
+                    userEmail!,
+                    style: GoogleFonts.questrial(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white, width: 2),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    minimumSize: const Size(0, 28),
+                  ),
+                  child: Text(
+                    userPlan ?? "Plan",
+                    style: GoogleFonts.questrial(fontSize: 12),
+                  ),
+                ),
               ],
             ),
           ),
-        ),
-        Align(
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 45),
-              GestureDetector(
-                onTap: () {
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(
-                  //     builder: (context) => MyAccountPage(),
-                  //   ),
-                  // );
-                },
-                child: CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  backgroundImage: NetworkImage(avatarUrl),
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                userName ?? "User",
-                style: GoogleFonts.questrial(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (userEmail != null)
-                Text(
-                  userEmail!,
-                  style: GoogleFonts.questrial(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-              OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white, width: 2),
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  minimumSize: const Size(0, 28),
-                ),
-                child: Text(
-                  userPlan ?? "Plan",
-                  style: GoogleFonts.questrial(fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
+        ],
+      ),
+    );
+  }
 
   Widget _buildDrawerItem(
     BuildContext context,
@@ -506,9 +488,10 @@ class _SidebarState extends State<Sidebar> {
   }) {
     return ListTile(
       dense: true,
-      leading: leadingIcon ??
+      leading:
+          leadingIcon ??
           (icon != null
-              ? Icon(icon, color: isLogout ? Colors.blueAccent : Colors.blueAccent)
+              ? Icon(icon, color: Colors.black) // Set icon color to black
               : const Icon(Icons.circle, color: Colors.transparent)),
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

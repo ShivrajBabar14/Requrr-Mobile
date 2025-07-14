@@ -10,7 +10,7 @@ class SignUpPage extends StatefulWidget {
   final String? email;
 
   const SignUpPage({Key? key, this.firstName, this.lastName, this.email})
-      : super(key: key);
+    : super(key: key);
 
   @override
   _SignUpPageState createState() => _SignUpPageState();
@@ -19,6 +19,7 @@ class SignUpPage extends StatefulWidget {
 class _SignUpPageState extends State<SignUpPage> {
   bool _obscurePassword = true;
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
@@ -47,243 +48,247 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _submitForm() async {
-  if (_formKey.currentState!.validate()) {
-    final Map<String, dynamic> formData = {
-      "firstName": _firstNameController.text.trim(),
-      "lastName": _lastNameController.text.trim(),
-      "email": _emailController.text.trim(),
-      "mobile": _mobileController.text.trim(),
-      "password": _passwordController.text.trim(),
-      "country": _selectedCountryCode,
-    };
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
 
-    try {
-      final response = await http.post(
-        Uri.parse('https://api.camrilla.com/user/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(formData),
-      );
+      final Map<String, dynamic> formData = {
+        "firstName": _firstNameController.text.trim(),
+        "lastName": _lastNameController.text.trim(),
+        "email": _emailController.text.trim(),
+        "mobile": _mobileController.text.trim(),
+        "password": _passwordController.text.trim(),
+        "country": _selectedCountryCode,
+      };
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        // Check if the response message indicates an error
-        if (data['message'] == 'Error') {
-          // Show the error message (Gmail already registered)
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gmail is already registered')),
-          );
-        } else if (data['message'] == 'success') {
-          // Show the success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Registration successful!')),
-          );
-
-          // Reset the form after a successful registration
-          Future.delayed(Duration(seconds: 1), () {
-            _formKey.currentState?.reset();
-            _firstNameController.clear();
-            _lastNameController.clear();
-            _emailController.clear();
-            _mobileController.clear();
-            _passwordController.clear();
-            _selectedCountryCode = null;  // Optionally clear country selection
-          });
-        }
-      } else {
-        // Handle failed request
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed: ${response.reasonPhrase}")),
+      try {
+        final response = await http.post(
+          Uri.parse('https://api.camrilla.com/user/register'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(formData),
         );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+
+          if (data['message'] == 'Error') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Gmail is already registered'),
+                backgroundColor: Colors.black,
+              ),
+            );
+          } else if (data['message'] == 'success') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Registration successful!'),
+                backgroundColor: Colors.black,
+              ),
+            );
+
+            Future.delayed(const Duration(seconds: 1), () {
+              _formKey.currentState?.reset();
+              _firstNameController.clear();
+              _lastNameController.clear();
+              _emailController.clear();
+              _mobileController.clear();
+              _passwordController.clear();
+              _selectedCountryCode = null;
+            });
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Failed: ${response.reasonPhrase}"),
+              backgroundColor: Colors.black,
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.black),
+        );
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
-    } catch (e) {
-      // Handle errors in case of exceptions
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
     }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(60),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 4,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            iconTheme: IconThemeData(color: Colors.black),
-            title: Text(
-              'Sign Up',
-              style: GoogleFonts.questrial(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
+      body: Stack(
+        children: [
+          // Background pattern (matching login.dart)
+          Container(
+            height: size.height * 0.2,
+            width: size.width,
+            decoration: const BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
               ),
             ),
           ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 30),
 
-              // Firstname & Lastname
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTextField(
-                      controller: _firstNameController,
-                      label: 'Firstname',
-                      icon: Icons.person_outline,
-                      readOnly: false,
-                      enabled: true,
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: _buildTextField(
-                      controller: _lastNameController,
-                      label: 'Lastname',
-                      readOnly: false,
-                      enabled: true,
-                    ),
+          // Form content
+          SingleChildScrollView(
+            padding: EdgeInsets.only(
+              top: size.height * 0.15,
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-
-              // Email
-              _buildTextField(
-                controller: _emailController,
-                label: 'Email address',
-                icon: Icons.email_outlined,
-                readOnly: false,
-                enabled: true,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 20),
-
-              // Country Picker
-              _buildCountryPickerField(),
-              const SizedBox(height: 20),
-
-              // Mobile
-              _buildTextField(
-                controller: _mobileController,
-                label: 'Mobile Number',
-                icon: Icons.phone_android,
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 20),
-
-              // Password
-              _buildTextField(
-                controller: _passwordController,
-                label: 'Password',
-                icon: Icons.lock_outline,
-                isPassword: true,
-              ),
-              const SizedBox(height: 40),
-
-              // Sign Up Button
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  onPressed: _submitForm,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'SIGN UP',
-                        style: GoogleFonts.questrial(
-                            fontSize: 16, color: Colors.white),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Create Account',
+                      style: GoogleFonts.questrial(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w600,
                       ),
-                      SizedBox(width: 10),
-                      Icon(Icons.arrow_forward, color: Colors.white),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Firstname & Lastname
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _StyledField(
+                            controller: _firstNameController,
+                            label: 'Firstname',
+                            icon: Icons.person_outline,
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: _StyledField(
+                            controller: _lastNameController,
+                            label: 'Lastname',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Email
+                    _StyledField(
+                      controller: _emailController,
+                      label: 'Email address',
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Country Picker
+                    _buildCountryPickerField(),
+                    const SizedBox(height: 20),
+
+                    // Mobile
+                    _StyledField(
+                      controller: _mobileController,
+                      label: 'Mobile Number',
+                      icon: Icons.phone_android,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Password
+                    _StyledField(
+                      controller: _passwordController,
+                      label: 'Password',
+                      icon: Icons.lock_outline,
+                      obscure: _obscurePassword,
+                      suffix: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Sign Up Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _submitForm,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : Text(
+                                'SIGN UP',
+                                style: GoogleFonts.questrial(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Login prompt
+                    Center(
+                      child: RichText(
+                        text: TextSpan(
+                          style: GoogleFonts.questrial(color: Colors.black54),
+                          children: [
+                            const TextSpan(text: "Already have an account? "),
+                            WidgetSpan(
+                              child: InkWell(
+                                onTap: () => Navigator.pop(context),
+                                child: Text(
+                                  'Login',
+                                  style: GoogleFonts.questrial(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    String? hint,
-    IconData? icon,
-    bool readOnly = false,
-    bool isPassword = false,
-    bool enabled = true,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return TextFormField(
-      controller: controller,
-      enabled: enabled,
-      obscureText: isPassword ? _obscurePassword : false,
-      cursorColor: Colors.blueAccent,
-      keyboardType: keyboardType,
-      style: GoogleFonts.questrial(),
-      validator: (value) =>
-          (value == null || value.isEmpty) ? 'Required' : null,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        labelStyle: GoogleFonts.questrial(color: Colors.grey),
-        hintStyle: GoogleFonts.questrial(color: Colors.grey),
-        prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
-        suffixIcon: isPassword
-            ? IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _obscurePassword = !_obscurePassword;
-                  });
-                },
-              )
-            : null,
-        enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey),
-        ),
-        focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.blueAccent),
-        ),
+        ],
       ),
     );
   }
@@ -300,18 +305,21 @@ class _SignUpPageState extends State<SignUpPage> {
             inputDecoration: InputDecoration(
               labelText: 'Search',
               hintText: 'Start typing to search',
-              prefixIcon: Icon(Icons.search),
+              prefixIcon: const Icon(Icons.search),
               labelStyle: GoogleFonts.questrial(color: Colors.grey),
-              enabledBorder: UnderlineInputBorder(
+              enabledBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.grey),
               ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.blueAccent),
+              focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.black),
               ),
-              border: UnderlineInputBorder(
+              border: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.grey),
               ),
-              contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 0),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 0,
+              ),
             ),
           ),
           onSelect: (Country country) {
@@ -324,13 +332,17 @@ class _SignUpPageState extends State<SignUpPage> {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: 'Country',
-          prefixIcon: Icon(Icons.flag_outlined, color: Colors.grey),
+          prefixIcon: const Icon(Icons.flag_outlined, color: Colors.grey),
           labelStyle: GoogleFonts.questrial(color: Colors.grey),
-          enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey),
+          filled: true,
+          fillColor: Colors.grey.shade100,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
           ),
-          focusedBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.blueAccent),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 2,
+            horizontal: 12,
           ),
         ),
         child: Text(
@@ -348,5 +360,48 @@ class _SignUpPageState extends State<SignUpPage> {
   String _getCountryNameFromCode(String code) {
     final country = Country.tryParse(code);
     return country?.name ?? code;
+  }
+}
+
+// Reusable styled field matching login.dart
+class _StyledField extends StatelessWidget {
+  const _StyledField({
+    required this.controller,
+    required this.label,
+    this.icon,
+    this.obscure = false,
+    this.suffix,
+    this.keyboardType,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final IconData? icon;
+  final bool obscure;
+  final Widget? suffix;
+  final TextInputType? keyboardType;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      cursorColor: Colors.black,
+      style: GoogleFonts.questrial(color: Colors.black),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.questrial(color: Colors.grey),
+        floatingLabelStyle: GoogleFonts.questrial(color: Colors.black),
+        filled: true,
+        fillColor: Colors.grey.shade100,
+        prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
+        suffixIcon: suffix,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
   }
 }
