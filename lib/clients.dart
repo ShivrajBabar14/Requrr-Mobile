@@ -182,6 +182,98 @@ class _ClientsPageState extends State<ClientsPage> {
     throw Exception('All endpoints failed');
   }
 
+  Future<bool> _addClient({
+    required String name,
+    required String email,
+    required String phone,
+    required String address,
+    required String notes,
+    required String companyName,
+  }) async {
+    if (!mounted) return false;
+
+    setState(() => isLoading = true);
+
+    try {
+      // Validate token
+      if (!isTokenValid(aToken)) {
+        if (!mounted) return false;
+        _redirectToLogin();
+        return false;
+      }
+
+      final trimmedToken = aToken!.trim();
+      final urls = [
+        'https://requrr.com/api/clients',
+        'https://www.requrr.com/api/clients',
+      ];
+
+      // Helper function for POST requests
+      Future<http.Response> makePostRequest(Uri url) async {
+        return await http
+            .post(
+              url,
+              headers: {
+                'Authorization': 'Bearer $trimmedToken',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+              body: jsonEncode({
+                "name": name,
+                "email": email,
+                "phone": phone,
+                "address": address,
+                "notes": notes,
+                "company_name": companyName,
+              }),
+            )
+            .timeout(const Duration(seconds: 30));
+      }
+
+      // First attempt
+      Uri url = Uri.parse(urls[0]);
+      http.Response response = await makePostRequest(url);
+
+      // Handle redirect (status code 307)
+      if (response.statusCode == 307) {
+        final redirectUrl = response.headers['location'];
+        if (redirectUrl != null) {
+          url = Uri.parse(redirectUrl);
+          response = await makePostRequest(url);
+        }
+      }
+
+      if (!mounted) return false;
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        // Success
+        return true;
+      } else {
+        final errorMessage = json.decode(response.body) is Map<String, dynamic>
+            ? json.decode(response.body)['message']?.toString() ??
+                  'Failed to add client (Status ${response.statusCode})'
+            : 'Failed to add client (Status ${response.statusCode})';
+        throw Exception(errorMessage);
+      }
+    } on http.ClientException catch (e) {
+      if (!mounted) return false;
+      _showError('Network error: ${e.message}');
+      return false;
+    } on FormatException catch (e) {
+      if (!mounted) return false;
+      _showError('Invalid server response: ${e.message}');
+      return false;
+    } on Exception catch (e) {
+      if (!mounted) return false;
+      _showError(e.toString().replaceAll('Exception: ', ''));
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
   Future<void> _saveClientChanges(dynamic clientId) async {
     try {
       if (!mounted) return;
@@ -442,6 +534,19 @@ class _ClientsPageState extends State<ClientsPage> {
                 ],
               ),
             ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 0), // Position above bottom nav
+        child: FloatingActionButton(
+          onPressed: () {
+            _showAddClientDialog();
+          },
+          backgroundColor: Colors.black,
+          child: const Icon(Icons.add, color: Colors.white),
+          elevation: 4,
+          shape: CircleBorder(), // Ensures perfect circle
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -821,6 +926,454 @@ class _ClientsPageState extends State<ClientsPage> {
               },
             ),
           ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showAddClientDialog() async {
+    final _formKey = GlobalKey<FormState>();
+
+    // Local variables to hold form data
+    String name = '';
+    String email = '';
+    String phone = '';
+    String address = '';
+    String notes = '';
+    String companyName = '';
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              insetPadding: const EdgeInsets.all(20),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Add Client',
+                        style: GoogleFonts.questrial(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Company Name Field
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Company Name',
+                          labelStyle: GoogleFonts.questrial(
+                            color: Colors.grey[600],
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Colors.black,
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                        style: GoogleFonts.questrial(
+                          color: Colors.black,
+                          fontSize: 14,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter company name';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) => companyName = value,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Name Field
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Client Name',
+                          labelStyle: GoogleFonts.questrial(
+                            color: Colors.grey[600],
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Colors.black,
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                        style: GoogleFonts.questrial(
+                          color: Colors.black,
+                          fontSize: 14,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter client name';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) => name = value,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Email Field
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Email',
+                          labelStyle: GoogleFonts.questrial(
+                            color: Colors.grey[600],
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Colors.black,
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                        style: GoogleFonts.questrial(
+                          color: Colors.black,
+                          fontSize: 14,
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter email';
+                          }
+                          if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(value)) {
+                            return 'Please enter a valid email';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) => email = value,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Phone Field
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Phone',
+                          labelStyle: GoogleFonts.questrial(
+                            color: Colors.grey[600],
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Colors.black,
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                        style: GoogleFonts.questrial(
+                          color: Colors.black,
+                          fontSize: 14,
+                        ),
+                        keyboardType: TextInputType.phone,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter phone number';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) => phone = value,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Address Field
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Address',
+                          labelStyle: GoogleFonts.questrial(
+                            color: Colors.grey[600],
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Colors.black,
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                        style: GoogleFonts.questrial(
+                          color: Colors.black,
+                          fontSize: 14,
+                        ),
+                        maxLines: 3,
+                        onChanged: (value) => address = value,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Notes Field
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Notes',
+                          labelStyle: GoogleFonts.questrial(
+                            color: Colors.grey[600],
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Colors.black,
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                        style: GoogleFonts.questrial(
+                          color: Colors.black,
+                          fontSize: 14,
+                        ),
+                        maxLines: 3,
+                        onChanged: (value) => notes = value,
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Action Buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.questrial(
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              elevation: 0,
+                            ),
+                            onPressed: () async {
+                              if (_formKey.currentState!.validate()) {
+                                try {
+                                  // Show loading indicator
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (context) => Center(
+                                      child: CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.black,
+                                            ),
+                                      ),
+                                    ),
+                                  );
+
+                                  // Call the API for adding the client
+                                  final success = await _addClient(
+                                    name: name,
+                                    email: email,
+                                    phone: phone,
+                                    address: address,
+                                    notes: notes,
+                                    companyName: companyName,
+                                  );
+
+                                  // Close loading indicator
+                                  if (mounted) Navigator.of(context).pop();
+
+                                  if (success && mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          '$name added successfully',
+                                        ),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                    Navigator.of(
+                                      context,
+                                    ).pop(); // Close the add dialog
+                                    fetchClients(); // Refresh the clients list
+                                  }
+                                } catch (e) {
+                                  // Close loading indicator if still mounted
+                                  if (mounted) Navigator.of(context).pop();
+
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Failed to add client: ${e.toString().replaceAll('Exception: ', '')}',
+                                        ),
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
+                                  }
+                                }
+                              }
+                            },
+                            child: Text(
+                              'Add',
+                              style: GoogleFonts.questrial(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
