@@ -83,22 +83,19 @@ class _ClientsPageState extends State<ClientsPage> {
 
   Future<void> fetchClients() async {
     if (!mounted) return;
+
     setState(() => isLoading = true);
 
     try {
+      // Get token from widget or shared preferences
       aToken ??=
           widget.token ??
           (await SharedPreferences.getInstance()).getString('auth_token');
 
+      // Validate token
       if (!isTokenValid(aToken)) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Session expired. Please login again.')),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => LoginScreen()),
-        );
+        _redirectToLogin();
         return;
       }
 
@@ -108,30 +105,56 @@ class _ClientsPageState extends State<ClientsPage> {
         'https://www.requrr.com/api/clients',
       ];
 
+      // Try multiple endpoints
       final response = await _fetchFirstSuccessful(urls, trimmedToken);
+
+      // Parse response
       final clientsList = (json.decode(response.body) as List).cast<dynamic>();
 
       if (mounted) {
         setState(() {
           clients = clientsList;
-          // Initialize all clients as not expanded
+          // Initialize expansion states
           expandedClients = {
             for (var i = 0; i < clientsList.length; i++) i: false,
           };
         });
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+    } on http.ClientException catch (e) {
+      if (!mounted) return;
+      _showError('Network error: ${e.message}');
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      _showError('Invalid server response: ${e.message}');
+    } on Exception catch (e) {
+      if (!mounted) return;
+      _showError(e.toString().replaceAll('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
+  }
+
+  // Helper method for redirecting to login
+  void _redirectToLogin() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => LoginScreen()),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Session expired. Please login again.'),
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  // Helper method for showing errors
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
+    );
   }
 
   Future<http.Response> _fetchFirstSuccessful(
@@ -160,8 +183,6 @@ class _ClientsPageState extends State<ClientsPage> {
   }
 
   Future<void> _saveClientChanges(dynamic clientId) async {
-    bool isSaving = true; // Define isSaving locally if not a class variable
-
     try {
       if (!mounted) return;
 
@@ -170,7 +191,7 @@ class _ClientsPageState extends State<ClientsPage> {
       final String clientIdStr = clientId.toString();
       Uri url = Uri.parse('https://requrr.com/api/clients/$clientIdStr');
 
-      // Helper function for making the PUT request
+      // Helper function for PUT requests
       Future<http.Response> makePutRequest(Uri url) async {
         return await http
             .put(
@@ -205,10 +226,6 @@ class _ClientsPageState extends State<ClientsPage> {
 
       if (!mounted) return;
 
-      // Debug logging
-      debugPrint('Final response status: ${response.statusCode}');
-      debugPrint('Final response body: ${response.body}');
-
       if (response.body.isEmpty) {
         throw Exception('Empty response from server');
       }
@@ -225,8 +242,12 @@ class _ClientsPageState extends State<ClientsPage> {
               duration: Duration(seconds: 2),
             ),
           );
+
+          // Refresh client list without navigation
           await fetchClients();
-          if (mounted) Navigator.of(context).pop();
+
+          // Only close the dialog
+          Navigator.of(context).pop();
         }
       } else {
         final errorMessage = responseData is Map<String, dynamic>
@@ -262,7 +283,88 @@ class _ClientsPageState extends State<ClientsPage> {
     } finally {
       if (mounted) {
         setState(() => isLoading = false);
-        isSaving = false;
+      }
+    }
+  }
+
+  Future<void> _deleteClient(String clientId) async {
+    if (!mounted) return;
+
+    setState(() => isLoading = true);
+
+    try {
+      // Validate token
+      if (!isTokenValid(aToken)) {
+        if (!mounted) return;
+        _redirectToLogin();
+        return;
+      }
+
+      final trimmedToken = aToken!.trim();
+      final urls = [
+        'https://requrr.com/api/clients/$clientId',
+        'https://www.requrr.com/api/clients/$clientId',
+      ];
+
+      // Helper function for DELETE requests
+      Future<http.Response> makeDeleteRequest(Uri url) async {
+        return await http
+            .delete(
+              url,
+              headers: {
+                'Authorization': 'Bearer $trimmedToken',
+                'Accept': 'application/json',
+              },
+            )
+            .timeout(const Duration(seconds: 30));
+      }
+
+      // First attempt
+      Uri url = Uri.parse(urls[0]);
+      http.Response response = await makeDeleteRequest(url);
+
+      // Handle redirect (status code 307)
+      if (response.statusCode == 307) {
+        final redirectUrl = response.headers['location'];
+        if (redirectUrl != null) {
+          url = Uri.parse(redirectUrl);
+          response = await makeDeleteRequest(url);
+        }
+      }
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        // Success - refresh the client list
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Client deleted successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          await fetchClients();
+        }
+      } else {
+        final errorMessage = json.decode(response.body) is Map<String, dynamic>
+            ? json.decode(response.body)['message']?.toString() ??
+                  'Failed to delete client (Status ${response.statusCode})'
+            : 'Failed to delete client (Status ${response.statusCode})';
+        throw Exception(errorMessage);
+      }
+    } on http.ClientException catch (e) {
+      if (!mounted) return;
+      _showError('Network error: ${e.message}');
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      _showError('Invalid server response: ${e.message}');
+    } on Exception catch (e) {
+      if (!mounted) return;
+      _showError(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
       }
     }
   }
@@ -454,7 +556,7 @@ class _ClientsPageState extends State<ClientsPage> {
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
-                  onTap: () {}, // Delete functionality
+                  onTap: () => _showDeleteConfirmationDialog(client),
                   child: const Icon(
                     Icons.delete,
                     size: 18,
@@ -668,6 +770,59 @@ class _ClientsPageState extends State<ClientsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showDeleteConfirmationDialog(dynamic client) async {
+    final clientName = client['name']?.toString() ?? 'this client';
+    final clientId = client['id']?.toString() ?? '';
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          title: Text(
+            'Delete "$clientName"',
+            style: GoogleFonts.questrial(
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete "$clientName"?',
+            style: GoogleFonts.questrial(color: Colors.black),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.questrial(color: Colors.grey[600]),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text(
+                'Delete',
+                style: GoogleFonts.questrial(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _deleteClient(clientId);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
