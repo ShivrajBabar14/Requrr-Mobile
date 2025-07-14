@@ -23,6 +23,24 @@ class _ClientsPageState extends State<ClientsPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   Map<int, bool> expandedClients = {}; // Track which clients are expanded
 
+  final TextEditingController _companyNameController = TextEditingController();
+  final TextEditingController _clientNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
+
+  @override
+  void dispose() {
+    _companyNameController.dispose();
+    _clientNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
   bool isTokenValid(String? token) {
     if (token == null || token.isEmpty) return false;
 
@@ -97,7 +115,9 @@ class _ClientsPageState extends State<ClientsPage> {
         setState(() {
           clients = clientsList;
           // Initialize all clients as not expanded
-          expandedClients = {for (var i = 0; i < clientsList.length; i++) i: false};
+          expandedClients = {
+            for (var i = 0; i < clientsList.length; i++) i: false,
+          };
         });
       }
     } catch (e) {
@@ -137,6 +157,114 @@ class _ClientsPageState extends State<ClientsPage> {
       } catch (_) {}
     }
     throw Exception('All endpoints failed');
+  }
+
+  Future<void> _saveClientChanges(dynamic clientId) async {
+    bool isSaving = true; // Define isSaving locally if not a class variable
+
+    try {
+      if (!mounted) return;
+
+      setState(() => isLoading = true);
+
+      final String clientIdStr = clientId.toString();
+      Uri url = Uri.parse('https://requrr.com/api/clients/$clientIdStr');
+
+      // Helper function for making the PUT request
+      Future<http.Response> makePutRequest(Uri url) async {
+        return await http
+            .put(
+              url,
+              headers: {
+                'Authorization': 'Bearer $aToken',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'company_name': _companyNameController.text,
+                'name': _clientNameController.text,
+                'email': _emailController.text,
+                'phone': _phoneController.text,
+                'address': _addressController.text,
+                'notes': _noteController.text,
+              }),
+            )
+            .timeout(const Duration(seconds: 30));
+      }
+
+      // First attempt
+      http.Response response = await makePutRequest(url);
+
+      // Handle redirect (status code 307)
+      if (response.statusCode == 307) {
+        final redirectUrl = response.headers['location'];
+        if (redirectUrl != null) {
+          url = Uri.parse(redirectUrl);
+          response = await makePutRequest(url);
+        }
+      }
+
+      if (!mounted) return;
+
+      // Debug logging
+      debugPrint('Final response status: ${response.statusCode}');
+      debugPrint('Final response body: ${response.body}');
+
+      if (response.body.isEmpty) {
+        throw Exception('Empty response from server');
+      }
+
+      // Parse response
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Client updated successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          await fetchClients();
+          if (mounted) Navigator.of(context).pop();
+        }
+      } else {
+        final errorMessage = responseData is Map<String, dynamic>
+            ? responseData['message']?.toString() ??
+                  'Failed to update client (Status ${response.statusCode})'
+            : 'Failed to update client (Status ${response.statusCode})';
+        throw Exception(errorMessage);
+      }
+    } on http.ClientException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Network error: ${e.message}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Invalid server response format: ${e.message}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } on Exception catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+        isSaving = false;
+      }
+    }
   }
 
   void _toggleExpand(int index) {
@@ -180,11 +308,7 @@ class _ClientsPageState extends State<ClientsPage> {
         shadowColor: Colors.grey.withOpacity(0.5),
       ),
       body: isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: Colors.black,
-              ),
-            )
+          ? Center(child: CircularProgressIndicator(color: Colors.black))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -316,14 +440,16 @@ class _ClientsPageState extends State<ClientsPage> {
               children: [
                 IconButton(
                   icon: Icon(
-                    isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     color: Colors.black,
                   ),
                   onPressed: () => _toggleExpand(index),
                 ),
                 const SizedBox(width: 4),
                 GestureDetector(
-                  onTap: () {}, // Edit functionality
+                  onTap: () => _showEditClientDialog(client),
                   child: const Icon(Icons.edit, size: 18, color: Colors.grey),
                 ),
                 const SizedBox(width: 8),
@@ -339,11 +465,14 @@ class _ClientsPageState extends State<ClientsPage> {
             ),
             onTap: () => _toggleExpand(index),
           ),
-          
+
           // Expanded content
           if (isExpanded)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
               child: Column(
                 children: [
                   _clientInfoRow(
@@ -372,6 +501,170 @@ class _ClientsPageState extends State<ClientsPage> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(text, style: GoogleFonts.questrial(fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditClientDialog(dynamic client) {
+    // Set initial values from the client data
+    _companyNameController.text = client['company_name'] ?? '';
+    _clientNameController.text = client['name'] ?? '';
+    _emailController.text = client['email'] ?? '';
+    _phoneController.text = client['phone'] ?? '';
+    _addressController.text = client['address'] ?? '';
+    _noteController.text = client['notes'] ?? client['note'] ?? '';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          insetPadding: EdgeInsets.symmetric(
+            // Add this for better control
+            horizontal: 20.0, // Adjust as needed
+            vertical: 24.0,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width:
+                MediaQuery.of(context).size.width * 0.9, // 90% of screen width
+            constraints: BoxConstraints(
+              maxWidth: 650, // Maximum width for larger screens
+            ),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Edit Client',
+                    style: GoogleFonts.questrial(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildEditField('Company Name', _companyNameController),
+                  _buildEditField('Client Name', _clientNameController),
+                  _buildEditField('Email', _emailController, isEmail: true),
+                  _buildEditField('Phone', _phoneController, isPhone: true),
+                  _buildEditField('Address', _addressController, maxLines: 3),
+                  _buildEditField('Note', _noteController, maxLines: 3),
+
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.questrial(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          _saveClientChanges(client['id']);
+                          Navigator.of(context).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Text(
+                            'Save',
+                            style: GoogleFonts.questrial(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEditField(
+    String label,
+    TextEditingController controller, {
+    bool isEmail = false,
+    bool isPhone = false,
+    int maxLines = 1,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.questrial(fontSize: 14, color: Colors.black54),
+          ),
+          const SizedBox(height: 4),
+          TextField(
+            controller: controller,
+            maxLines: maxLines,
+            keyboardType: isEmail
+                ? TextInputType.emailAddress
+                : isPhone
+                ? TextInputType.phone
+                : TextInputType.text,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Colors.black),
+              ),
+            ),
+            style: GoogleFonts.questrial(),
           ),
         ],
       ),
