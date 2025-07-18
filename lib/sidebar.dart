@@ -65,7 +65,9 @@ class _SidebarState extends State<Sidebar> {
   Future<void> _loadAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken');
+
     final userDataString = prefs.getString('userData');
+    print("ACCESS TOKEN: $token");
 
     if (token != null) {
       Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
@@ -76,14 +78,24 @@ class _SidebarState extends State<Sidebar> {
         userData = jsonDecode(userDataString);
       }
 
+      final prettyUserData = const JsonEncoder.withIndent(
+        '  ',
+      ).convert(userData);
+      final prettyDecodedToken = const JsonEncoder.withIndent(
+        '  ',
+      ).convert(decodedToken);
+
+      print("🧾 Decoded JWT Token:\n$prettyDecodedToken");
+      print("📦 User Data from SharedPreferences:\n$prettyUserData");
+
       setState(() {
         this.token = token;
         userName =
-            userData["name"] ??
-            decodedToken['name'] ??
-            decodedToken['username'] ??
-            decodedToken['email'] ??
-            'Guest';
+            '${userData["first_name"] ?? ""} ${userData["last_name"] ?? ""}'
+                .trim();
+        if (userName!.isEmpty) {
+          userName = decodedToken["email"] ?? "User";
+        }
         userEmail = userData["email"] ?? decodedToken['email'];
         profileImage = userData["profileImage"];
       });
@@ -96,7 +108,7 @@ class _SidebarState extends State<Sidebar> {
   Future<void> _fetchUserPlan(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('https://api.camrilla.com/user-plan'),
+        Uri.parse('https://www.requrr.com/api/me'),
         headers: {
           "Authorization": "Bearer $token",
           "Content-Type": "application/json",
@@ -106,30 +118,30 @@ class _SidebarState extends State<Sidebar> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // Nicely print full JSON response
-        final prettyResponse = const JsonEncoder.withIndent('  ').convert(data);
-        print("User Plan API full response:\n$prettyResponse");
+        print(
+          "User Plan API full response:\n${const JsonEncoder.withIndent('  ').convert(data)}",
+        );
 
-        final userPlanDetails = data['data']['userPlanDetails'];
-        final availablePlans = data['data']['availablePlans'];
+        setState(() {
+          userName = "${data['first_name']} ${data['last_name']}".trim();
+          userEmail = data['email'];
+          // Set default plan name (you can update this if real plan info is elsewhere)
+          userPlan = "Basic";
+        });
 
-        if (userPlanDetails != null) {
-          setState(() {
-            userPlan = userPlanDetails['planName'] ?? 'Basic';
-          });
-        } else if (availablePlans != null && availablePlans.isNotEmpty) {
-          // If user doesn't have a plan, fallback to the first available plan
-          setState(() {
-            userPlan = availablePlans[0]['planName'] ?? 'Basic';
-          });
-        } else {
-          setState(() {
-            userPlan = 'Basic'; // Fallback if nothing available
-          });
-        }
+        // Optionally store the fetched user info locally
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          "userData",
+          jsonEncode({
+            "first_name": data["first_name"],
+            "last_name": data["last_name"],
+            "email": data["email"],
+            "profileImage": "", // Optional
+          }),
+        );
       } else {
         print("Failed to fetch user plan: ${response.statusCode}");
-        print("Response body: ${response.body}");
       }
     } catch (e) {
       print("Error fetching user plan: $e");
@@ -199,171 +211,184 @@ class _SidebarState extends State<Sidebar> {
         child: Column(
           children: [
             _buildHeader(context, userName, userPlan),
+
             Expanded(
               child: Container(
+                padding: const EdgeInsets.only(top: 16.0),
                 color: Colors.white,
-                child: ListView(
-                  padding: EdgeInsets.zero,
+                child: Column(
                   children: [
-                    if (token != null) ...[
-                      _buildDrawerItem(
-                        context,
-                        Icons.home,
-                        "Assignment",
-                        count: assignmentCount,
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, "/assignment");
-                        },
-                      ),
-
-                      if (userPlan == 'Basic') ...[
-                        _buildDrawerItem(
-                          context,
-                          Icons.flash_on,
-                          "Become Professional",
-                          onTap: () {
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(
-                            //     builder: (context) => PlanSelectionScreen(),
-                            //   ),
-                            // );
-                          },
-                        ),
-                        const Divider(),
-                      ],
-                      _buildDrawerItem(
-                        context,
-                        Icons.feedback,
-                        "Feedback",
-                        onTap: () {
-                          if (token != null) {
-                            showFeedbackDialog(context, token!);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Please login first"),
+                    Expanded(
+                      child: ListView(
+                        padding: EdgeInsets.zero,
+                        children: [
+                          if (token != null) ...[
+                            _buildDrawerItem(
+                              context,
+                              Icons.home,
+                              "Assignment",
+                              count: assignmentCount,
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.pushNamed(context, "/assignment");
+                              },
+                            ),
+                            if (userPlan == 'Basic') ...[
+                              _buildDrawerItem(
+                                context,
+                                Icons.subscriptions,
+                                "Subscription",
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.pushNamed(context, "/subscription");
+                                },
                               ),
+                            ],
+                            _buildDrawerItem(
+                              context,
+                              Icons.feedback,
+                              "Feedback",
+                              onTap: () {
+                                if (token != null) {
+                                  showFeedbackDialog(context, token!);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Please login first"),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                            _buildDrawerItem(
+                              context,
+                              Icons.smartphone,
+                              "App Info",
+                              onTap: () {
+                                Navigator.pushNamed(context, "/appInfo");
+                              },
+                            ),
+                            _buildDrawerItem(
+                              context,
+                              Icons.settings,
+                              "Settings",
+                              onTap: () {},
+                            ),
+                            _buildDrawerItem(
+                              context,
+                              Icons.thumb_up,
+                              "Rate Us",
+                              onTap: () {},
+                            ),
+                            _buildDrawerItem(
+                              context,
+                              Icons.share,
+                              "Share App",
+                              onTap: () {},
+                            ),
+                          ] else ...[
+                            _buildDrawerItem(
+                              context,
+                              Icons.smartphone,
+                              "App Info",
+                              onTap: () {
+                                Navigator.pushNamed(context, "/appInfo");
+                              },
+                            ),
+                            _buildDrawerItem(
+                              context,
+                              Icons.thumb_up,
+                              "Rate Us",
+                              onTap: () {},
+                            ),
+                            _buildDrawerItem(
+                              context,
+                              Icons.email,
+                              "Contact Us",
+                              onTap: () {},
+                            ),
+                            _buildDrawerItem(
+                              context,
+                              Icons.share,
+                              "Share App",
+                              onTap: () {},
+                            ),
+                            _buildDrawerItem(
+                              context,
+                              null,
+                              "Login",
+                              isLogout: false,
+                              leadingIcon: SvgPicture.asset(
+                                'assets/Login.svg',
+                                width: 24,
+                                height: 24,
+                                color: Colors.red,
+                              ),
+                              onTap: () {
+                                Navigator.pop(context);
+                                Future.delayed(
+                                  const Duration(milliseconds: 250),
+                                  () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => Registration(),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (token != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+                        child: GestureDetector(
+                          onTap: () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.clear();
+                            setState(() {
+                              token = null;
+                            });
+
+                            if (widget.onLogout != null) widget.onLogout!();
+
+                            Navigator.of(context).pushNamedAndRemoveUntil(
+                              '/login', 
+                              (Route<dynamic> route) => false,
                             );
-                          }
-                        },
-                      ),
-                      _buildDrawerItem(
-                        context,
-                        Icons.smartphone,
-                        "App Info",
-                        onTap: () {
-                          Navigator.pushNamed(context, "/appInfo");
-                        },
-                      ),
-                      _buildDrawerItem(
-                        context,
-                        Icons.settings,
-                        "Settings",
-                        onTap: () {
-                          // Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //     builder: (context) => SettingsPage(),
-                          //   ),
-                          // );
-                        },
-                      ),
-                      _buildDrawerItem(
-                        context,
-                        Icons.thumb_up,
-                        "Rate Us",
-                        onTap: () {
-                          // Open Play Store/App Store link
-                        },
-                      ),
-                      _buildDrawerItem(
-                        context,
-                        Icons.share,
-                        "Share App",
-                        onTap: () {
-                          // Share App Link
-                        },
-                      ),
-                      _buildDrawerItem(
-                        context,
-                        null,
-                        "Log Out",
-                        isLogout: true,
-                        leadingIcon: SvgPicture.asset(
-                          'assets/Logout.svg',
-                          width: 24,
-                          height: 24,
-                          color: Colors.red,
+                          },
+
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SvgPicture.asset(
+                                  'assets/Logout.svg',
+                                  width: 20,
+                                  height: 20,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "Log Out",
+                                  style: GoogleFonts.questrial(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        onTap: () async {
-                          Navigator.pop(context);
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.clear();
-                          setState(() {
-                            token = null;
-                          });
-                          if (widget.onLogout != null) {
-                            widget.onLogout!();
-                          }
-                        },
                       ),
-                    ] else ...[
-                      _buildDrawerItem(
-                        context,
-                        Icons.smartphone,
-                        "App Info",
-                        onTap: () {
-                          Navigator.pushNamed(context, "/appInfo");
-                        },
-                      ),
-                      _buildDrawerItem(
-                        context,
-                        Icons.thumb_up,
-                        "Rate Us",
-                        onTap: () {
-                          // Open Play Store/App Store link
-                        },
-                      ),
-                      _buildDrawerItem(
-                        context,
-                        Icons.email,
-                        "Contact Us",
-                        onTap: () {
-                          // TODO: Implement contact us action
-                        },
-                      ),
-                      _buildDrawerItem(
-                        context,
-                        Icons.share,
-                        "Share App",
-                        onTap: () {
-                          // Share App Link
-                        },
-                      ),
-                      _buildDrawerItem(
-                        context,
-                        null,
-                        "Login",
-                        isLogout: false,
-                        leadingIcon: SvgPicture.asset(
-                          'assets/Login.svg',
-                          width: 24,
-                          height: 24,
-                          color: Colors.red,
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Future.delayed(const Duration(milliseconds: 250), () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => Registration(),
-                            );
-                          });
-                        },
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -381,11 +406,9 @@ class _SidebarState extends State<Sidebar> {
   ) {
     String avatarUrl;
 
-    // Ensure avatarUrl is always assigned
     if (profileImage != null && profileImage!.isNotEmpty) {
       avatarUrl = profileImage!;
     } else if (userEmail != null && userEmail!.contains('@gmail.com')) {
-      // Use UI Avatars based on userName
       final initials = (userName ?? 'U')
           .split(' ')
           .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
@@ -393,85 +416,64 @@ class _SidebarState extends State<Sidebar> {
       avatarUrl =
           'https://ui-avatars.com/api/?name=$initials&background=de512e&color=fff';
     } else {
-      avatarUrl = 'https://via.placeholder.com/150';
+      avatarUrl =
+          'https://ui-avatars.com/api/?name=User&background=999&color=fff';
     }
 
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(color: Colors.blueAccent),
-      child: Stack(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      decoration: const BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 204),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color.fromARGB(255, 255, 255, 255),
-                  Color.fromARGB(255, 0, 0, 0),
-                ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundImage: NetworkImage(avatarUrl),
               ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 45),
-                GestureDetector(
-                  onTap: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder: (context) => MyAccountPage(),
-                    //   ),
-                    // );
-                  },
-                  child: CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    backgroundImage: NetworkImage(avatarUrl),
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  userName ?? "User",
-                  style: GoogleFonts.questrial(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (userEmail != null)
-                  Text(
-                    userEmail!,
-                    style: GoogleFonts.questrial(
-                      color: Colors.white70,
-                      fontSize: 14,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Hello,",
+                      style: GoogleFonts.questrial(
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white, width: 2),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
+                    Text(
+                      userName ?? "User",
+                      style: GoogleFonts.questrial(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                    minimumSize: const Size(0, 28),
-                  ),
-                  child: Text(
-                    userPlan ?? "Plan",
-                    style: GoogleFonts.questrial(fontSize: 12),
-                  ),
+                    if (userEmail != null)
+                      Text(
+                        userEmail!,
+                        style: GoogleFonts.questrial(
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          const SizedBox(height: 20),
         ],
       ),
     );

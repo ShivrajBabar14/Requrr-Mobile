@@ -4,6 +4,7 @@ import 'package:flutter/services.dart'; // Required for SystemChrome
 import 'register.dart';
 import 'dashboard.dart';
 import 'login.dart';
+import 'subscription.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +55,7 @@ class AppRoot extends StatelessWidget {
       routes: {
         '/register': (context) => Registration(),
         '/login': (context) => const LoginScreen(),
+        '/subscription': (context) => SubscriptionPage(),
       },
 
       /// 👇 Directly open the HomeScreen on app launch

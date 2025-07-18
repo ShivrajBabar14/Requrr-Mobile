@@ -18,6 +18,7 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 import 'login.dart';
 // import 'package:flutter/services.dart';
+import 'add_renewal_dialog.dart';
 
 void main() {
   runApp(const Dashboard());
@@ -41,6 +42,24 @@ class _DashboardState extends State<Dashboard> {
   final int _baseYear = 1970;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   List<dynamic> incomeRecords = [];
+  List<dynamic> allIncomeRecords = [];
+  List<dynamic> clientList = []; // <-- Add this line to define clientList
+  List<dynamic> serviceList = []; // <-- Add this line to define serviceList
+
+  List<Map<String, dynamic>> clients = [];
+  List<Map<String, dynamic>> services = [];
+
+  bool showAddRenewalForm = false;
+  final TextEditingController clientIdController = TextEditingController();
+  final TextEditingController serviceIdController = TextEditingController();
+  final TextEditingController amountController = TextEditingController();
+  final TextEditingController paymentDateController = TextEditingController();
+  final TextEditingController dueDateController = TextEditingController();
+  final TextEditingController notesController = TextEditingController();
+  String status = 'pending';
+  bool isRecurring = false;
+  String? recurrenceId;
+
   bool isLoading = true;
   bool isCalendarVisible = false;
   bool selectedDateOnlyPicked = false;
@@ -54,6 +73,29 @@ class _DashboardState extends State<Dashboard> {
   ); // Example: 1970–2069
   List<Map<String, dynamic>> selectedDayItems = [];
   List<Map<String, dynamic>> selectedCards = [];
+  List<Map<String, dynamic>> get pastDueRenewals => incomeRecords
+      .where((record) {
+        final dueDate = DateTime.parse(record['due_date']);
+        final status = record['status'];
+        return dueDate.isBefore(DateTime.now()) && status != 'paid';
+      })
+      .cast<Map<String, dynamic>>()
+      .toList();
+  Map<String, List<Map<String, dynamic>>> groupedPastDue = {};
+
+  void groupPastDueRenewals() {
+    groupedPastDue.clear();
+    for (var record in pastDueRenewals) {
+      final dueDate = DateTime.parse(record['due_date']);
+      final key = "${dueDate.year}-${dueDate.month.toString().padLeft(2, '0')}";
+
+      if (!groupedPastDue.containsKey(key)) {
+        groupedPastDue[key] = [];
+      }
+      groupedPastDue[key]!.add(record);
+    }
+  }
+
   Map<String, dynamic>? selectedCardData;
   late ScrollController _yearScrollController;
   int? _selectedCardIndex;
@@ -114,12 +156,14 @@ class _DashboardState extends State<Dashboard> {
   @override
   void initState() {
     super.initState();
+    _initializeToken().then((_) {
+      fetchClientsAndServices();
+    });
     _cardPageController = PageController();
     _yearScrollController = ScrollController();
     if (incomeRecords.isNotEmpty) {
       _cardKeys = List.generate(incomeRecords.length, (_) => GlobalKey());
     }
-    _initializeToken();
     aToken = widget.token ?? '';
 
     // Calculate initial page based on current year and month relative to base year
@@ -151,6 +195,45 @@ class _DashboardState extends State<Dashboard> {
 
     // ✅ Immediately fetch assignments for current month
     fetchRenewals(date: currentMonth);
+  }
+
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('accessToken');
+  }
+
+  Future<void> fetchClientsAndServices() async {
+    final token = await getToken(); // get your token logic
+
+    try {
+      final clientRes = await http.get(
+        Uri.parse('https://www.requrr.com/api/clients'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final serviceRes = await http.get(
+        Uri.parse('https://www.requrr.com/api/Services'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      print("Service API response status: ${serviceRes.statusCode}");
+      print("Service API response body: ${serviceRes.body}");
+
+      if (clientRes.statusCode == 200 && serviceRes.statusCode == 200) {
+        setState(() {
+          clients = List<Map<String, dynamic>>.from(
+            json.decode(clientRes.body),
+          );
+          services = List<Map<String, dynamic>>.from(
+            json.decode(serviceRes.body),
+          );
+        });
+      } else {
+        print("Error fetching data: Client status ${clientRes.statusCode}, Service status ${serviceRes.statusCode}");
+        print("Client response body: ${clientRes.body}");
+        print("Service response body: ${serviceRes.body}");
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
   }
 
   Future<void> _initializeToken() async {
@@ -186,6 +269,7 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> fetchRenewals({DateTime? date, bool isYearView = false}) async {
+    if (!mounted) return;
     setState(() {
       isLoading = true;
       incomeRecords = [];
@@ -198,6 +282,7 @@ class _DashboardState extends State<Dashboard> {
       }
 
       if (!isTokenValid(aToken)) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Session expired. Please login again.')),
         );
@@ -235,10 +320,56 @@ class _DashboardState extends State<Dashboard> {
 
       final List<dynamic> assignmentsList = json.decode(response.body);
 
-      // Filter by date if provided
-      List<dynamic> filteredList = assignmentsList.where((assignment) {
-        if (assignment['due_date'] == null) return false;
-        try {
+      List<dynamic> allRecords = assignmentsList.map((e) {
+        e['company_name'] = 'Loading...';
+        e['client_name'] = 'Loading...';
+        e['service_name'] = 'Loading...';
+        return e;
+      }).toList();
+
+      // Fetch due renewals
+      final allIncomeResponse = await http.get(
+        Uri.parse('https://www.requrr.com/api/income_records'),
+        headers: {
+          'Authorization': 'Bearer $trimmedToken',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (allIncomeResponse.statusCode == 200) {
+        final List<dynamic> allDueRenewals = json.decode(
+          allIncomeResponse.body,
+        );
+
+        final filteredDueRenewals = allDueRenewals
+            .where((assignment) {
+              if (assignment['due_date'] == null) return false;
+              final dueDate = DateTime.parse(assignment['due_date']);
+              if (date == null) {
+                final now = DateTime.now();
+                return dueDate.month == now.month && dueDate.year == now.year;
+              } else if (isYearView) {
+                return dueDate.year == date.year;
+              } else {
+                return dueDate.month == date.month && dueDate.year == date.year;
+              }
+            })
+            .map((r) {
+              r['company_name'] = 'Loading...';
+              r['client_name'] = 'Loading...';
+              r['service_name'] = 'Loading...';
+              return r;
+            })
+            .toList();
+
+        allRecords.addAll(filteredDueRenewals);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        allIncomeRecords = allRecords;
+        incomeRecords = allRecords.where((assignment) {
+          if (assignment['due_date'] == null) return false;
           final dueDate = DateTime.parse(assignment['due_date']);
           if (date == null) {
             final now = DateTime.now();
@@ -248,34 +379,29 @@ class _DashboardState extends State<Dashboard> {
           } else {
             return dueDate.month == date.month && dueDate.year == date.year;
           }
-        } catch (e) {
-          return false;
-        }
-      }).toList();
-
-      setState(() {
-        incomeRecords = filteredList.map((e) {
-          e['company_name'] = 'Loading...';
-          return e;
         }).toList();
+
+        groupPastDueRenewalsFrom(allRecords);
       });
 
-      for (int i = 0; i < filteredList.length; i++) {
-        final assignment = filteredList[i];
+      // Fetch client & service names
+      for (int i = 0; i < incomeRecords.length; i++) {
+        final assignment = incomeRecords[i];
         final clientId = assignment['client_id'];
+        final serviceId = assignment['service_id'];
 
+        // Get client name and company
         if (clientId != null) {
           final clientUrls = [
             'https://requrr.com/api/clients/$clientId',
             'https://www.requrr.com/api/clients/$clientId',
           ];
-
           http.Response? clientResponse;
-          for (final clientUrl in clientUrls) {
+          for (final url in clientUrls) {
             try {
               clientResponse = await http
                   .get(
-                    Uri.parse(clientUrl),
+                    Uri.parse(url),
                     headers: {
                       'Authorization': 'Bearer $trimmedToken',
                       'Accept': 'application/json',
@@ -288,28 +414,100 @@ class _DashboardState extends State<Dashboard> {
 
           if (clientResponse?.statusCode == 200) {
             final clientData = json.decode(clientResponse!.body);
-            assignment['company_name'] = clientData['company_name'] ?? '';
+            assignment['company_name'] =
+                clientData['company_name'] ?? 'Unavailable';
+            assignment['client_name'] = clientData['name'] ?? 'Unavailable';
           } else {
             assignment['company_name'] = 'Unavailable';
+            assignment['client_name'] = 'Unavailable';
           }
         }
 
-        if (mounted) {
-          setState(() {
-            incomeRecords[i] = assignment;
-          });
-          await Future.delayed(const Duration(milliseconds: 100));
+        // Get service name
+        if (serviceId != null) {
+          final serviceUrls = [
+            'https://requrr.com/api/Services/$serviceId',
+            'https://www.requrr.com/api/Services/$serviceId',
+          ];
+          http.Response? serviceResponse;
+          for (final url in serviceUrls) {
+            try {
+              serviceResponse = await http
+                  .get(
+                    Uri.parse(url),
+                    headers: {
+                      'Authorization': 'Bearer $trimmedToken',
+                      'Accept': 'application/json',
+                    },
+                  )
+                  .timeout(const Duration(seconds: 3));
+              if (serviceResponse.statusCode == 200) break;
+            } catch (_) {}
+          }
+
+          if (serviceResponse?.statusCode == 200) {
+            final serviceData = json.decode(serviceResponse!.body);
+            assignment['service_name'] = serviceData['name'] ?? 'Unavailable';
+          } else {
+            assignment['service_name'] = 'Unavailable';
+          }
         }
+
+        if (!mounted) return;
+        setState(() {
+          incomeRecords[i] = assignment;
+        });
+
+        await Future.delayed(const Duration(milliseconds: 100));
       }
     } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+      });
+      print('Error in fetchRenewals: $e');
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
-    } finally {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
+      ).showSnackBar(SnackBar(content: Text('Error fetching renewals: $e')));
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  Future<void> submitRenewal(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final response = await http.post(
+      Uri.parse('https://www.requrr.com/api/income_records'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      print('Renewal submitted: ${response.body}');
+    } else {
+      print('Failed to submit renewal: ${response.body}');
+    }
+  }
+
+  void groupPastDueRenewalsFrom(List<dynamic> sourceList) {
+    groupedPastDue.clear();
+    for (var record in sourceList) {
+      final dueDate = DateTime.tryParse(record['due_date'] ?? '');
+      final status = record['status'];
+      if (dueDate != null &&
+          dueDate.isBefore(DateTime.now()) &&
+          status != 'paid') {
+        final key =
+            "${dueDate.year}-${dueDate.month.toString().padLeft(2, '0')}";
+        groupedPastDue.putIfAbsent(key, () => []).add(record);
       }
     }
   }
@@ -385,7 +583,7 @@ class _DashboardState extends State<Dashboard> {
             key: _scaffoldKey,
             backgroundColor: Colors.white,
             drawer: Sidebar(
-              token: aToken,
+              token: aToken ?? '',
               onYearSelected: (selectedYear) {
                 setState(() {
                   currentMonth = DateTime(selectedYear);
@@ -433,9 +631,17 @@ class _DashboardState extends State<Dashboard> {
               title: Text(
                 selectedDateOnlyPicked
                     ? DateFormat('dd MMM yyyy').format(selectedDate)
+                    : currentMonth.year == DateTime.now().year &&
+                          currentMonth.month == DateTime.now().month
+                    ? "Current Month Renewals"
+                    : currentMonth.isBefore(
+                        DateTime(DateTime.now().year, DateTime.now().month),
+                      )
+                    ? "Due Renewals"
                     : "Upcoming Renewals",
                 style: GoogleFonts.questrial(color: Colors.black, fontSize: 15),
               ),
+
               backgroundColor: Colors.white,
               surfaceTintColor: Colors.white,
               elevation: isCalendarVisible ? 0 : 4,
@@ -582,6 +788,39 @@ class _DashboardState extends State<Dashboard> {
                                           ),
                                         )
                                         .toList(),
+                                    // Past Due Renewals Section
+                                    SizedBox(height: 24),
+                                    Text(
+                                      "Past Due Renewals",
+                                      style: GoogleFonts.questrial(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.redAccent,
+                                      ),
+                                    ),
+                                    ...groupedPastDue.entries.expand(
+                                      (entry) => [
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 12.0,
+                                          ),
+                                          child: Text(
+                                            entry.key,
+                                            style: GoogleFonts.questrial(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                        ),
+                                        ...entry.value.map(
+                                          (record) => _renewalsItem(
+                                            record,
+                                            incomeRecords.indexOf(record),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 )
                               else
@@ -617,6 +856,30 @@ class _DashboardState extends State<Dashboard> {
                 ),
               ],
             ),
+            floatingActionButton: Padding(
+              padding: const EdgeInsets.only(bottom: 0),
+              child: FloatingActionButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AddRenewalDialog(
+                      clients: clients,
+                      services: services,
+                      token: aToken ?? '',
+                      onSuccess: () {
+                        // refresh data after success
+                        fetchClientsAndServices();
+                      },
+                    ),
+                  );
+                },
+                backgroundColor: Colors.black,
+                child: const Icon(Icons.add, color: Colors.white),
+                elevation: 4,
+                shape: const CircleBorder(),
+              ),
+            ),
+
             bottomNavigationBar: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -708,6 +971,63 @@ class _DashboardState extends State<Dashboard> {
         ],
       ),
     );
+  }
+
+  Future<void> showAddRenewalDialog(BuildContext context) async {
+    final result = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AddRenewalDialog(
+          clients: clientList.cast<Map<String, dynamic>>(),
+          services: serviceList.cast<Map<String, dynamic>>(),
+          token: aToken ?? '',
+          onSuccess: () async {
+            await fetchRenewals(date: currentMonth, isYearView: isYearView);
+            Navigator.of(context).pop(true);
+          },
+        ); // Your form widget
+      },
+    );
+
+    if (result == true) {
+      // Optionally reload or refresh something
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Renewal added successfully")));
+    }
+  }
+
+  // Add this method to handle adding a renewal
+  Future<bool> addRenewal({
+    required String clientName,
+    required String serviceName,
+    required DateTime dueDate,
+    required double amount,
+  }) async {
+    try {
+      // You may need to adjust the API endpoint and payload as per your backend
+      final response = await http.post(
+        Uri.parse('https://www.requrr.com/api/income_records'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $aToken',
+        },
+        body: jsonEncode({
+          "client_name": clientName,
+          "service_name": serviceName,
+          "due_date": DateFormat('yyyy-MM-dd').format(dueDate),
+          "amount": amount,
+        }),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        throw Exception('Failed to add renewal');
+      }
+    } catch (e) {
+      print('Error in addRenewal: $e');
+      return false;
+    }
   }
 
   Widget _renewalsItem(dynamic assignment, int index) {
@@ -843,10 +1163,12 @@ class _DashboardState extends State<Dashboard> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '$daysUntilRenewal days left',
+                            daysUntilRenewal == 0
+                                ? 'Due'
+                                : '$daysUntilRenewal days left',
                             style: GoogleFonts.questrial(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -896,109 +1218,102 @@ class _DashboardState extends State<Dashboard> {
     }
 
     return AnimatedPositioned(
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOut,
-      right: _sidebarVisible ? 20 : -MediaQuery.of(context).size.width,
-      top: cardTop,
+      bottom: _sidebarVisible ? 0 : -MediaQuery.of(context).size.height,
+      left: 0,
+      right: 0,
       child: Material(
-        elevation: 12,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.transparent,
         child: Container(
-          width: MediaQuery.of(context).size.width * 0.7,
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.9,
-          ),
-          decoration: BoxDecoration(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black26,
                 blurRadius: 10,
-                offset: Offset(0, 4),
+                offset: Offset(0, -4),
               ),
             ],
           ),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Renewal Details',
-                        style: GoogleFonts.questrial(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Renewal Details',
+                      style: GoogleFonts.onest(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF222222),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.black87),
-                        onPressed: () {
-                          setState(() {
-                            _sidebarVisible = false;
-                          });
-
-                          Future.delayed(const Duration(seconds: 3), () {
-                            if (mounted) {
-                              setState(() {
-                                _showDetailSidebar = false;
-                              });
-                            }
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  const Divider(thickness: 1),
-
-                  _infoTile("Client", assignment['client_name']),
-                  _infoTile("Company", assignment['company_name']),
-                  _infoTile("Service", assignment['service_name']),
-                  if (assignment['due_date'] != null)
-                    _infoTile(
-                      "Due Date",
-                      DateFormat(
-                        'dd MMM yyyy',
-                      ).format(DateTime.parse(assignment['due_date'])),
                     ),
-                  _infoTile("Amount", assignment['amount']),
-                  _infoTile("Payment Status", assignment['status']),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() => _sidebarVisible = false);
+                        Future.delayed(const Duration(milliseconds: 300), () {
+                          if (mounted) {
+                            setState(() => _showDetailSidebar = false);
+                          }
+                        });
+                      },
+                      child: const Icon(Icons.close, color: Color(0xFFDA1930)),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 10),
+
+                // Renewal Info
+                _infoTile("Client", assignment['client_name']),
+                _infoTile("Company", assignment['company_name']),
+                _infoTile("Service", assignment['service_name']),
+                if (assignment['due_date'] != null)
                   _infoTile(
-                    "Notes",
-                    assignment['notes'] ?? 'No notes available',
+                    "Due Date",
+                    DateFormat(
+                      'dd MMM yyyy',
+                    ).format(DateTime.parse(assignment['due_date'])),
                   ),
+                _infoTile("Amount", assignment['amount']),
+                _infoTile("Payment Status", assignment['status']),
+                _infoTile("Notes", assignment['notes'] ?? 'No notes available'),
 
-                  const SizedBox(height: 12),
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: daysUntilRenewal <= 7
-                            ? Colors.red
-                            : Colors.black,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '$daysUntilRenewal days left',
-                        style: GoogleFonts.questrial(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
+                const SizedBox(height: 12),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: daysUntilRenewal <= 7 ? Colors.red : Colors.black,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      daysUntilRenewal == 0
+                          ? 'Due'
+                          : '$daysUntilRenewal days left',
+                      style: GoogleFonts.onest(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+
+                const SizedBox(height: 16),
+              ],
             ),
           ),
         ),
