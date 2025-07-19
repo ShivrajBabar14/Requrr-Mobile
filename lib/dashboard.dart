@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'sidebar.dart';
 // import 'addassignment.dart';
+import 'subscription.dart';
 // import 'details.dart';
 // import 'notepad.dart';
 import 'package:http/http.dart' as http;
@@ -34,6 +35,7 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<Dashboard> {
   String? aToken;
+  bool hasSubscription = false; // New state variable for subscription status
   DateTime selectedDate = DateTime.now();
   DateTime currentMonth = DateTime.now();
   bool isExpanded = false;
@@ -82,191 +84,6 @@ class _DashboardState extends State<Dashboard> {
       .cast<Map<String, dynamic>>()
       .toList();
   Map<String, List<Map<String, dynamic>>> groupedPastDue = {};
-
-  void groupPastDueRenewals() {
-    groupedPastDue.clear();
-    for (var record in pastDueRenewals) {
-      final dueDate = DateTime.parse(record['due_date']);
-      final key = "${dueDate.year}-${dueDate.month.toString().padLeft(2, '0')}";
-
-      if (!groupedPastDue.containsKey(key)) {
-        groupedPastDue[key] = [];
-      }
-      groupedPastDue[key]!.add(record);
-    }
-  }
-
-  Map<String, dynamic>? selectedCardData;
-  late ScrollController _yearScrollController;
-  int? _selectedCardIndex;
-  late PageController _cardPageController;
-  bool _showDetailSidebar = false;
-  bool _sidebarVisible = false;
-
-  List<GlobalKey>? _cardKeys;
-
-  String?
-  selectedFunctionId; // Track selected function id for showing info card
-
-  bool isTokenValid(String? token) {
-    if (token == null || token.isEmpty) return false;
-
-    try {
-      final parts = token.split('.');
-      if (parts.length != 3) return false;
-
-      final payload = parts[1];
-      final normalized = base64Url.normalize(payload);
-      final decoded = utf8.decode(base64Url.decode(normalized));
-      final jsonMap = json.decode(decoded);
-
-      if (jsonMap['exp'] == null) return false;
-
-      final expiryDate = DateTime.fromMillisecondsSinceEpoch(
-        jsonMap['exp'] * 1000,
-      );
-      return expiryDate.isAfter(DateTime.now());
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // Stats variables
-  int totalRecords = 0;
-  double totalAmount = 0;
-  double paymentReceived = 0;
-  double duePayment = 0;
-  List<dynamic> recordDetails = [];
-  List<dynamic> paymentDetails = [];
-  List<dynamic> getRecordsForSelectedDate() {
-    final selectedDateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
-
-    return incomeRecords.where((record) {
-      if (record['payment_date'] != null) {
-        final paymentDate = DateTime.parse(record['payment_date']);
-        if (DateFormat('yyyy-MM-dd').format(paymentDate) == selectedDateStr) {
-          return true;
-        }
-      }
-      return false;
-    }).toList();
-  }
-
-  @override
-  @override
-  void initState() {
-    super.initState();
-    _initializeToken().then((_) {
-      fetchClientsAndServices();
-    });
-    _cardPageController = PageController();
-    _yearScrollController = ScrollController();
-    if (incomeRecords.isNotEmpty) {
-      _cardKeys = List.generate(incomeRecords.length, (_) => GlobalKey());
-    }
-    aToken = widget.token ?? '';
-
-    // Calculate initial page based on current year and month relative to base year
-    _initialPage =
-        (DateTime.now().year - _baseYear) * 12 + (DateTime.now().month - 1);
-    _pageController = PageController(initialPage: _initialPage);
-
-    currentMonth = DateTime.now(); // ✅ Set current month
-
-    // 🔧 PageController listener
-    _pageController.addListener(() {
-      if (_pageController.page != null) {
-        int pageIndex = _pageController.page!.round();
-
-        int newYear = _baseYear + (pageIndex ~/ 12);
-        int newMonth = (pageIndex % 12) + 1;
-
-        DateTime newCurrentMonth = DateTime(newYear, newMonth);
-
-        if (newCurrentMonth.year != currentMonth.year ||
-            newCurrentMonth.month != currentMonth.month) {
-          setState(() {
-            currentMonth = newCurrentMonth;
-          });
-          fetchRenewals(date: currentMonth);
-        }
-      }
-    });
-
-    // ✅ Immediately fetch assignments for current month
-    fetchRenewals(date: currentMonth);
-  }
-
-  Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('accessToken');
-  }
-
-  Future<void> fetchClientsAndServices() async {
-    final token = await getToken(); // get your token logic
-
-    try {
-      final clientRes = await http.get(
-        Uri.parse('https://www.requrr.com/api/clients'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      final serviceRes = await http.get(
-        Uri.parse('https://www.requrr.com/api/Services'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      print("Service API response status: ${serviceRes.statusCode}");
-      print("Service API response body: ${serviceRes.body}");
-
-      if (clientRes.statusCode == 200 && serviceRes.statusCode == 200) {
-        setState(() {
-          clients = List<Map<String, dynamic>>.from(
-            json.decode(clientRes.body),
-          );
-          services = List<Map<String, dynamic>>.from(
-            json.decode(serviceRes.body),
-          );
-        });
-      } else {
-        print("Error fetching data: Client status ${clientRes.statusCode}, Service status ${serviceRes.statusCode}");
-        print("Client response body: ${clientRes.body}");
-        print("Service response body: ${serviceRes.body}");
-      }
-    } catch (e) {
-      print('Error: $e');
-    }
-  }
-
-  Future<void> _initializeToken() async {
-    if (widget.token != null) {
-      aToken = widget.token;
-    } else {
-      final prefs = await SharedPreferences.getInstance();
-      aToken = prefs.getString('auth_token');
-    }
-    print('Initialized token: ${aToken != null ? "exists" : "null"}');
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _yearScrollController.dispose();
-    _cardPageController.dispose();
-    super.dispose();
-  }
-
-  void _scrollToSelectedYear() {
-    final selectedIndex = yearList.indexOf(currentMonth.year);
-    if (selectedIndex != -1) {
-      // Delay to ensure the widget is rendered before scrolling
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _yearScrollController.animateTo(
-          selectedIndex * 60.0, // 60.0 is an estimated item width incl. spacing
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      });
-    }
-  }
 
   Future<void> fetchRenewals({DateTime? date, bool isYearView = false}) async {
     if (!mounted) return;
@@ -362,7 +179,11 @@ class _DashboardState extends State<Dashboard> {
             })
             .toList();
 
-        allRecords.addAll(filteredDueRenewals);
+        // Deduplicate records before adding
+        final existingIds = allRecords.map((r) => r['id']).toSet();
+        final uniqueDueRenewals = filteredDueRenewals.where((r) => !existingIds.contains(r['id'])).toList();
+
+        allRecords.addAll(uniqueDueRenewals);
       }
 
       if (!mounted) return;
@@ -476,6 +297,220 @@ class _DashboardState extends State<Dashboard> {
     setState(() {
       isLoading = false;
     });
+  }
+
+
+  void groupPastDueRenewals() {
+    groupedPastDue.clear();
+    for (var record in pastDueRenewals) {
+      final dueDate = DateTime.parse(record['due_date']);
+      final key = "${dueDate.year}-${dueDate.month.toString().padLeft(2, '0')}";
+
+      if (!groupedPastDue.containsKey(key)) {
+        groupedPastDue[key] = [];
+      }
+      groupedPastDue[key]!.add(record);
+    }
+  }
+
+  Map<String, dynamic>? selectedCardData;
+  late ScrollController _yearScrollController;
+  int? _selectedCardIndex;
+  late PageController _cardPageController;
+  bool _showDetailSidebar = false;
+  bool _sidebarVisible = false;
+
+  List<GlobalKey>? _cardKeys;
+
+  String?
+  selectedFunctionId; // Track selected function id for showing info card
+
+  bool isTokenValid(String? token) {
+    if (token == null || token.isEmpty) return false;
+
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return false;
+
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final jsonMap = json.decode(decoded);
+
+      if (jsonMap['exp'] == null) return false;
+
+      final expiryDate = DateTime.fromMillisecondsSinceEpoch(
+        jsonMap['exp'] * 1000,
+      );
+      return expiryDate.isAfter(DateTime.now());
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Stats variables
+  int totalRecords = 0;
+  double totalAmount = 0;
+  double paymentReceived = 0;
+  double duePayment = 0;
+  List<dynamic> recordDetails = [];
+  List<dynamic> paymentDetails = [];
+  List<dynamic> getRecordsForSelectedDate() {
+    final selectedDateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
+
+    return incomeRecords.where((record) {
+      if (record['payment_date'] != null) {
+        final paymentDate = DateTime.parse(record['payment_date']);
+        if (DateFormat('yyyy-MM-dd').format(paymentDate) == selectedDateStr) {
+          return true;
+        }
+      }
+      return false;
+    }).toList();
+  }
+
+  @override
+  @override
+  void initState() {
+    super.initState();
+    _initializeToken().then((_) {
+      fetchSubscriptionStatus(); // Fetch subscription status on init
+      fetchClientsAndServices();
+    });
+    _cardPageController = PageController();
+    _yearScrollController = ScrollController();
+    if (incomeRecords.isNotEmpty) {
+      _cardKeys = List.generate(incomeRecords.length, (_) => GlobalKey());
+    }
+    aToken = widget.token ?? '';
+
+    // Calculate initial page based on current year and month relative to base year
+    _initialPage =
+        (DateTime.now().year - _baseYear) * 12 + (DateTime.now().month - 1);
+    _pageController = PageController(initialPage: _initialPage);
+
+    currentMonth = DateTime.now(); // ✅ Set current month
+
+    // 🔧 PageController listener
+    _pageController.addListener(() {
+      if (_pageController.page != null) {
+        int pageIndex = _pageController.page!.round();
+
+        int newYear = _baseYear + (pageIndex ~/ 12);
+        int newMonth = (pageIndex % 12) + 1;
+
+        DateTime newCurrentMonth = DateTime(newYear, newMonth);
+
+        if (newCurrentMonth.year != currentMonth.year ||
+            newCurrentMonth.month != currentMonth.month) {
+          setState(() {
+            currentMonth = newCurrentMonth;
+          });
+          fetchRenewals(date: currentMonth);
+        }
+      }
+    });
+
+    // ✅ Immediately fetch assignments for current month
+    fetchRenewals(date: currentMonth);
+  }
+
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('accessToken');
+  }
+
+  Future<void> fetchClientsAndServices() async {
+    final token = await getToken(); // get your token logic
+
+    try {
+      final clientRes = await http.get(
+        Uri.parse('https://www.requrr.com/api/clients'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final serviceRes = await http.get(
+        Uri.parse('https://www.requrr.com/api/Services'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      print("Service API response status: ${serviceRes.statusCode}");
+      print("Service API response body: ${serviceRes.body}");
+
+      if (clientRes.statusCode == 200 && serviceRes.statusCode == 200) {
+        setState(() {
+          clients = List<Map<String, dynamic>>.from(
+            json.decode(clientRes.body),
+          );
+          services = List<Map<String, dynamic>>.from(
+            json.decode(serviceRes.body),
+          );
+        });
+      } else {
+        print("Error fetching data: Client status ${clientRes.statusCode}, Service status ${serviceRes.statusCode}");
+        print("Client response body: ${clientRes.body}");
+        print("Service response body: ${serviceRes.body}");
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+
+  Future<void> _initializeToken() async {
+    if (widget.token != null) {
+      aToken = widget.token;
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      aToken = prefs.getString('auth_token');
+    }
+    print('Initialized token: ${aToken != null ? "exists" : "null"}');
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _yearScrollController.dispose();
+    _cardPageController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToSelectedYear() {
+    final selectedIndex = yearList.indexOf(currentMonth.year);
+    if (selectedIndex != -1) {
+      // Delay to ensure the widget is rendered before scrolling
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _yearScrollController.animateTo(
+          selectedIndex * 60.0, // 60.0 is an estimated item width incl. spacing
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      });
+    }
+  }
+
+  Future<void> fetchSubscriptionStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? aToken ?? '';
+      if (token.isEmpty) return;
+
+      final response = await http.get(
+        Uri.parse('https://www.requrr.com/api/subscription/status'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          hasSubscription = data['subscribed'] ?? false;
+        });
+      } else {
+        print('Failed to fetch subscription status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching subscription status: $e');
+    }
   }
 
   Future<void> submitRenewal(Map<String, dynamic> data) async {
@@ -856,29 +891,37 @@ class _DashboardState extends State<Dashboard> {
                 ),
               ],
             ),
-            floatingActionButton: Padding(
-              padding: const EdgeInsets.only(bottom: 0),
-              child: FloatingActionButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AddRenewalDialog(
-                      clients: clients,
-                      services: services,
-                      token: aToken ?? '',
-                      onSuccess: () {
-                        // refresh data after success
-                        fetchClientsAndServices();
-                      },
-                    ),
-                  );
-                },
-                backgroundColor: Colors.black,
-                child: const Icon(Icons.add, color: Colors.white),
-                elevation: 4,
-                shape: const CircleBorder(),
-              ),
-            ),
+  floatingActionButton: Padding(
+    padding: const EdgeInsets.only(bottom: 0),
+    child: FloatingActionButton(
+      onPressed: () {
+        if (!hasSubscription && incomeRecords.length >= 5) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => SubscriptionPage()),
+          );
+          return;
+        }
+        showDialog(
+          context: context,
+          builder: (context) => AddRenewalDialog(
+            clients: clients,
+            services: services,
+            token: aToken ?? '',
+            onSuccess: () {
+              // refresh data after success
+              fetchRenewals(date: currentMonth, isYearView: isYearView);
+              fetchClientsAndServices();
+            },
+          ),
+        );
+      },
+      backgroundColor: Colors.black,
+      child: const Icon(Icons.add, color: Colors.white),
+      elevation: 4,
+      shape: const CircleBorder(),
+    ),
+  ),
 
             bottomNavigationBar: Container(
               decoration: BoxDecoration(

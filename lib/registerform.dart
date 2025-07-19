@@ -21,92 +21,102 @@ class _SignUpPageState extends State<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
-  late TextEditingController _firstNameController;
-  late TextEditingController _lastNameController;
+  final TextEditingController _fullNameController = TextEditingController();
   late TextEditingController _emailController;
   final TextEditingController _mobileController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   String? _selectedCountryCode;
+  String? _selectedPhoneCode;
 
   @override
   void initState() {
     super.initState();
-    _firstNameController = TextEditingController(text: widget.firstName ?? '');
-    _lastNameController = TextEditingController(text: widget.lastName ?? '');
     _emailController = TextEditingController(text: widget.email ?? '');
   }
 
   @override
   void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
+    _fullNameController.dispose();
     _emailController.dispose();
     _mobileController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
+      if (_passwordController.text != _confirmPasswordController.text) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Passwords do not match")));
+        return;
+      }
+
       setState(() => _isLoading = true);
 
+      final nameParts = _fullNameController.text.trim().split(' ');
+      String firstName = nameParts.isNotEmpty ? nameParts.first : '';
+      String lastName = nameParts.length > 1
+          ? nameParts.sublist(1).join(' ')
+          : '';
+
       final Map<String, dynamic> formData = {
-        "firstName": _firstNameController.text.trim(),
-        "lastName": _lastNameController.text.trim(),
+        "first_name": firstName,
+        "last_name": lastName,
         "email": _emailController.text.trim(),
-        "mobile": _mobileController.text.trim(),
         "password": _passwordController.text.trim(),
-        "country": _selectedCountryCode,
+        "country_code": _selectedCountryCode ?? '',
+        "phone_code": _selectedPhoneCode ?? '',
+        "phone": _mobileController.text.trim(),
       };
 
       try {
         final response = await http.post(
-          Uri.parse('https://api.camrilla.com/user/register'),
+          Uri.parse('https://www.requrr.com/api/auth/signup'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(formData),
         );
 
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
+        final data = jsonDecode(response.body);
 
-          if (data['message'] == 'Error') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Gmail is already registered'),
-                backgroundColor: Colors.black,
-              ),
-            );
-          } else if (data['message'] == 'success') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Registration successful!'),
-                backgroundColor: Colors.black,
-              ),
-            );
+        if (response.statusCode == 200 && data['message'] != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(data['message']),
+              backgroundColor: Colors.black,
+            ),
+          );
 
-            Future.delayed(const Duration(seconds: 1), () {
-              _formKey.currentState?.reset();
-              _firstNameController.clear();
-              _lastNameController.clear();
-              _emailController.clear();
-              _mobileController.clear();
-              _passwordController.clear();
+          if (data['message'].toLowerCase().contains('success')) {
+            // Clear form fields
+            _formKey.currentState?.reset();
+            _fullNameController.clear();
+            _emailController.clear();
+            _mobileController.clear();
+            _passwordController.clear();
+            _confirmPasswordController.clear();
+            setState(() {
               _selectedCountryCode = null;
+              _selectedPhoneCode = null;
+            });
+
+            Future.delayed(const Duration(seconds: 2), () {
+              Navigator.of(context).pushReplacementNamed('/login');
             });
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Failed: ${response.reasonPhrase}"),
-              backgroundColor: Colors.black,
-            ),
+            SnackBar(content: Text(data['message'] ?? "Signup failed")),
           );
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.black),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
@@ -120,7 +130,6 @@ class _SignUpPageState extends State<SignUpPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background pattern (matching login.dart)
           Container(
             height: size.height * 0.2,
             width: size.width,
@@ -132,8 +141,6 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
             ),
           ),
-
-          // Form content
           SingleChildScrollView(
             padding: EdgeInsets.only(
               top: size.height * 0.15,
@@ -168,28 +175,13 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     const SizedBox(height: 32),
 
-                    // Firstname & Lastname
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _StyledField(
-                            controller: _firstNameController,
-                            label: 'Firstname',
-                            icon: Icons.person_outline,
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: _StyledField(
-                            controller: _lastNameController,
-                            label: 'Lastname',
-                          ),
-                        ),
-                      ],
+                    _StyledField(
+                      controller: _fullNameController,
+                      label: 'Full Name',
+                      icon: Icons.person_outline,
                     ),
                     const SizedBox(height: 20),
 
-                    // Email
                     _StyledField(
                       controller: _emailController,
                       label: 'Email address',
@@ -198,20 +190,17 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Country Picker
                     _buildCountryPickerField(),
                     const SizedBox(height: 20),
 
-                    // Mobile
                     _StyledField(
                       controller: _mobileController,
-                      label: 'Mobile Number',
-                      icon: Icons.phone_android,
+                      label: 'Phone',
+                      icon: Icons.phone,
                       keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 20),
 
-                    // Password
                     _StyledField(
                       controller: _passwordController,
                       label: 'Password',
@@ -222,18 +211,22 @@ class _SignUpPageState extends State<SignUpPage> {
                           _obscurePassword
                               ? Icons.visibility_off
                               : Icons.visibility,
-                          color: Colors.grey,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    _StyledField(
+                      controller: _confirmPasswordController,
+                      label: 'Confirm Password',
+                      icon: Icons.lock_outline,
+                      obscure: true,
                     ),
                     const SizedBox(height: 32),
 
-                    // Sign Up Button
                     SizedBox(
                       width: double.infinity,
                       height: 52,
@@ -260,7 +253,6 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Login prompt
                     Center(
                       child: RichText(
                         text: TextSpan(
@@ -298,33 +290,11 @@ class _SignUpPageState extends State<SignUpPage> {
       onTap: () {
         showCountryPicker(
           context: context,
-          showPhoneCode: false,
-          countryListTheme: CountryListThemeData(
-            bottomSheetHeight: 400,
-            textStyle: GoogleFonts.questrial(),
-            inputDecoration: InputDecoration(
-              labelText: 'Search',
-              hintText: 'Start typing to search',
-              prefixIcon: const Icon(Icons.search),
-              labelStyle: GoogleFonts.questrial(color: Colors.grey),
-              enabledBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.grey),
-              ),
-              focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.black),
-              ),
-              border: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.grey),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 12,
-                horizontal: 0,
-              ),
-            ),
-          ),
+          showPhoneCode: true,
           onSelect: (Country country) {
             setState(() {
               _selectedCountryCode = country.countryCode;
+              _selectedPhoneCode = "+${country.phoneCode}";
             });
           },
         );
@@ -363,7 +333,7 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 }
 
-// Reusable styled field matching login.dart
+// Reusable styled field
 class _StyledField extends StatelessWidget {
   const _StyledField({
     required this.controller,

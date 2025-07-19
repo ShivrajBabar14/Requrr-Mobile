@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 
 class AddRenewalDialog extends StatefulWidget {
@@ -25,15 +26,16 @@ class _AddRenewalDialogState extends State<AddRenewalDialog> {
 
   int? selectedClientId;
   int? selectedServiceId;
-  TextEditingController amountController = TextEditingController();
-  TextEditingController paymentDateController = TextEditingController();
-  TextEditingController dueDateController = TextEditingController();
-  TextEditingController notesController = TextEditingController();
+  String status = 'pending';
   bool isRecurring = false;
   String? recurrenceId;
 
+  final amountController = TextEditingController();
+  final paymentDateController = TextEditingController();
+  final dueDateController = TextEditingController();
+  final notesController = TextEditingController();
+
   bool isSubmitting = false;
-  String status = 'pending';
 
   void _onServiceChanged(int? serviceId) {
     if (serviceId != null) {
@@ -48,9 +50,7 @@ class _AddRenewalDialogState extends State<AddRenewalDialog> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      isSubmitting = true;
-    });
+    setState(() => isSubmitting = true);
 
     final payload = {
       "client_id": selectedClientId,
@@ -58,7 +58,7 @@ class _AddRenewalDialogState extends State<AddRenewalDialog> {
       "amount": double.tryParse(amountController.text) ?? 0,
       "payment_date": paymentDateController.text,
       "due_date": dueDateController.text,
-      "status": "pending",
+      "status": status,
       "is_recurring": isRecurring,
       "recurrence_id": recurrenceId,
       "notes": notesController.text,
@@ -73,9 +73,7 @@ class _AddRenewalDialogState extends State<AddRenewalDialog> {
       body: json.encode(payload),
     );
 
-    setState(() {
-      isSubmitting = false;
-    });
+    setState(() => isSubmitting = false);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       widget.onSuccess();
@@ -88,150 +86,227 @@ class _AddRenewalDialogState extends State<AddRenewalDialog> {
     }
   }
 
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.questrial(color: Colors.grey[600]),
+      filled: true,
+      fillColor: Colors.grey[50],
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Colors.black, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Add Renewal'),
-      content: SingleChildScrollView(
+    return Dialog(
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.all(20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Client Dropdown
+              Text(
+                'Add Renewal',
+                style: GoogleFonts.questrial(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 20),
+
               DropdownButtonFormField<int>(
                 value: selectedClientId,
-                decoration: const InputDecoration(labelText: 'Client'),
-              items: widget.clients.map((client) {
-                return DropdownMenuItem<int>(
-                  value: client['id'],
-                  child: Text(client['name'] ?? 'Unknown'),
-                );
-              }).toList(),
+                decoration: _inputDecoration('Client'),
+                style: GoogleFonts.questrial(fontSize: 14, color: Colors.black),
+                items: widget.clients.map((client) {
+                  return DropdownMenuItem<int>(
+                    value: client['id'],
+                    child: Text(client['name'] ?? 'Unknown'),
+                  );
+                }).toList(),
                 onChanged: (val) => setState(() => selectedClientId = val),
-                validator: (val) => val == null ? 'Please select a client' : null,
+                validator: (val) =>
+                    val == null ? 'Please select a client' : null,
               ),
+              const SizedBox(height: 16),
 
-              const SizedBox(height: 12),
-
-              // Service Dropdown
               DropdownButtonFormField<int>(
                 value: selectedServiceId,
-                decoration: const InputDecoration(labelText: 'Service'),
-              items: widget.services.map((service) {
-                return DropdownMenuItem<int>(
-                  value: service['id'],
-                  child: Text(service['service'] ?? service['name'] ?? 'Unknown'),
-                );
-              }).toList(),
+                decoration: _inputDecoration('Service'),
+                style: GoogleFonts.questrial(fontSize: 14, color: Colors.black),
+                items: widget.services.map((service) {
+                  return DropdownMenuItem<int>(
+                    value: service['id'],
+                    child: Text(service['service'] ?? service['name'] ?? 'Unknown'),
+                  );
+                }).toList(),
                 onChanged: _onServiceChanged,
-                validator: (val) => val == null ? 'Please select a service' : null,
+                validator: (val) =>
+                    val == null ? 'Please select a service' : null,
               ),
+              const SizedBox(height: 16),
 
-              const SizedBox(height: 12),
-
-              // Amount
               TextFormField(
                 controller: amountController,
-                decoration: const InputDecoration(labelText: 'Amount (₹)'),
+                decoration: _inputDecoration('Amount (₹)'),
                 keyboardType: TextInputType.number,
-                validator: (val) => val == null || val.isEmpty ? 'Enter amount' : null,
+                validator: (val) =>
+                    val == null || val.isEmpty ? 'Enter amount' : null,
+                style: GoogleFonts.questrial(fontSize: 14, color: Colors.black),
               ),
+              const SizedBox(height: 16),
 
-              const SizedBox(height: 12),
-
-              // Status Dropdown
               DropdownButtonFormField<String>(
                 value: status,
-                decoration: const InputDecoration(labelText: 'Status'),
+                decoration: _inputDecoration('Status'),
+                style: GoogleFonts.questrial(fontSize: 14, color: Colors.black),
                 items: const [
                   DropdownMenuItem(value: 'pending', child: Text('Pending')),
                   DropdownMenuItem(value: 'paid', child: Text('Paid')),
                   DropdownMenuItem(value: 'overdue', child: Text('Overdue')),
                   DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
                 ],
-                onChanged: (val) {
-                  setState(() {
-                    status = val ?? 'pending';
-                  });
-                },
-                validator: (val) => val == null ? 'Please select a status' : null,
+                onChanged: (val) => setState(() => status = val ?? 'pending'),
               ),
+              const SizedBox(height: 16),
 
-              const SizedBox(height: 12),
-
-              // Start Date (Payment Date)
               TextFormField(
                 controller: paymentDateController,
-                decoration: const InputDecoration(labelText: 'Start Date'),
-                validator: (val) => val == null || val.isEmpty ? 'Enter start date' : null,
+                readOnly: true,
+                decoration: _inputDecoration('Start Date'),
                 onTap: () async {
-                  FocusScope.of(context).requestFocus(FocusNode());
-                  DateTime? pickedDate = await showDatePicker(
+                  FocusScope.of(context).unfocus();
+                  DateTime? picked = await showDatePicker(
                     context: context,
                     initialDate: DateTime.now(),
                     firstDate: DateTime(2000),
                     lastDate: DateTime(2100),
                   );
-                  if (pickedDate != null) {
-                    paymentDateController.text = pickedDate.toIso8601String().split('T')[0];
-                    setState(() {});
+                  if (picked != null) {
+                    paymentDateController.text =
+                        picked.toIso8601String().split('T')[0];
                   }
                 },
+                validator: (val) =>
+                    val == null || val.isEmpty ? 'Enter start date' : null,
+                style: GoogleFonts.questrial(fontSize: 14, color: Colors.black),
               ),
+              const SizedBox(height: 16),
 
-              const SizedBox(height: 12),
-
-              // End Date (Due Date)
               TextFormField(
                 controller: dueDateController,
-                decoration: const InputDecoration(labelText: 'End Date'),
-                validator: (val) => val == null || val.isEmpty ? 'Enter end date' : null,
+                readOnly: true,
+                decoration: _inputDecoration('End Date'),
                 onTap: () async {
-                  FocusScope.of(context).requestFocus(FocusNode());
-                  DateTime? pickedDate = await showDatePicker(
+                  FocusScope.of(context).unfocus();
+                  DateTime? picked = await showDatePicker(
                     context: context,
                     initialDate: DateTime.now(),
                     firstDate: DateTime(2000),
                     lastDate: DateTime(2100),
                   );
-                  if (pickedDate != null) {
-                    dueDateController.text = pickedDate.toIso8601String().split('T')[0];
-                    setState(() {});
+                  if (picked != null) {
+                    dueDateController.text =
+                        picked.toIso8601String().split('T')[0];
                   }
                 },
+                validator: (val) =>
+                    val == null || val.isEmpty ? 'Enter end date' : null,
+                style: GoogleFonts.questrial(fontSize: 14, color: Colors.black),
               ),
+              const SizedBox(height: 16),
 
-              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Checkbox(
+                    value: isRecurring,
+                    onChanged: (val) =>
+                        setState(() => isRecurring = val ?? false),
+                  ),
+                  Text(
+                    'Is Recurring',
+                    style: GoogleFonts.questrial(fontSize: 14),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-
-              const SizedBox(height: 12),
-
-              // Notes
               TextFormField(
                 controller: notesController,
-                decoration: const InputDecoration(labelText: 'Notes'),
+                decoration: _inputDecoration('Notes'),
+                style: GoogleFonts.questrial(fontSize: 14, color: Colors.black),
+              ),
+              const SizedBox(height: 24),
+
+              // Action Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: GoogleFonts.questrial(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: isSubmitting ? null : _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      elevation: 0,
+                    ),
+                    child: isSubmitting
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'Submit',
+                            style: GoogleFonts.questrial(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: isSubmitting ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: isSubmitting ? null : _submitForm,
-          child: isSubmitting
-              ? const SizedBox(
-                  height: 16,
-                  width: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Submit'),
-        ),
-      ],
     );
   }
 }
