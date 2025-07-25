@@ -1476,8 +1476,8 @@ class _ServicesPageState extends State<ServicesPage> {
           },
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard),
-              label: 'Dashboard',
+              icon: Icon(Icons.autorenew),
+              label: 'Renewals',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.miscellaneous_services_outlined),

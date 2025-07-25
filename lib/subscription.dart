@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'sidebar.dart';
+import 'payment_success.dart';
 
 class SubscriptionPage extends StatefulWidget {
   const SubscriptionPage({super.key});
@@ -285,6 +286,14 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           ),
         ),
       );
+      // Navigate to payment success page
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const PaymentSuccessPage(),
+          ),
+        );
+      }
     }
     fetchData();
   }
