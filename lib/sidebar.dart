@@ -223,27 +223,45 @@ class _SidebarState extends State<Sidebar> {
                         padding: EdgeInsets.zero,
                         children: [
                           if (token != null) ...[
+                            // _buildDrawerItem(
+                            //   context,
+                            //   Icons.home,
+                            //   "Assignment",
+                            //   count: assignmentCount,
+                            //   onTap: () {
+                            //     Navigator.pop(context);
+                            //     Navigator.pushNamed(context, "/assignment");
+                            //   },
+                            // ),
                             _buildDrawerItem(
                               context,
-                              Icons.home,
-                              "Assignment",
-                              count: assignmentCount,
+                              Icons.receipt_long,
+                              "Recurring Expenses",
                               onTap: () {
                                 Navigator.pop(context);
-                                Navigator.pushNamed(context, "/assignment");
+                                Navigator.pushNamed(context, "/recurring_expenses");
                               },
                             ),
-                            if (userPlan == 'Basic') ...[
-                              _buildDrawerItem(
-                                context,
-                                Icons.subscriptions,
-                                "Subscription",
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  Navigator.pushNamed(context, "/subscription");
-                                },
-                              ),
-                            ],
+                           
+                            _buildDrawerItem(
+                              context,
+                              Icons.subscriptions,
+                              "Subscription",
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.pushNamed(context, "/subscription");
+                              },
+                            ),
+                            _buildDrawerItem(
+                              context,
+                              Icons.notifications,
+                              "Notification Settings",
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.pushNamed(context, "/notification_preferences");
+                              },
+                            ),
+                         
                             _buildDrawerItem(
                               context,
                               Icons.feedback,

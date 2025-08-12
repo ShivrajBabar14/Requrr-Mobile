@@ -20,6 +20,8 @@ import 'dart:io';
 import 'login.dart';
 // import 'package:flutter/services.dart';
 import 'add_renewal_dialog.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:async';
 
 void main() {
   runApp(const Dashboard());
@@ -84,6 +86,15 @@ class _DashboardState extends State<Dashboard> {
       .cast<Map<String, dynamic>>()
       .toList();
   Map<String, List<Map<String, dynamic>>> groupedPastDue = {};
+
+  // Notification plugin
+  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  
+  // Set to keep track of notified renewals to prevent duplicates
+  final Set<String> _notifiedRenewalIds = {};
+  
+  // Timer for periodic checks
+  Timer? _notificationTimer;
 
   Future<void> fetchRenewals({DateTime? date, bool isYearView = false}) async {
     if (!mounted) return;
@@ -186,6 +197,39 @@ class _DashboardState extends State<Dashboard> {
         allRecords.addAll(uniqueDueRenewals);
       }
 
+      // Fetch recurring expenses to merge with income records
+      final recurringExpensesResponse = await http.get(
+        Uri.parse('https://requrr-web-v2.vercel.app/api/requrring_expenses'),
+        headers: {
+          'Authorization': 'Bearer $trimmedToken',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (recurringExpensesResponse.statusCode == 200) {
+        final List<dynamic> recurringExpenses = json.decode(recurringExpensesResponse.body);
+
+        // Map recurring expenses to income record format
+        final List<dynamic> mappedRecurringExpenses = recurringExpenses.map((expense) {
+          return {
+            'id': 'recurring_${expense['id']}',
+            'client_name': 'Recurring Expense',
+            'service_name': expense['title'] ?? 'Recurring Expense',
+            'due_date': expense['due_date'],
+            'amount': expense['amount'],
+            'status': expense['status'],
+            'notes': expense['notes'],
+            'is_recurring_expense': true,
+          };
+        }).toList();
+
+        // Deduplicate recurring expenses before adding
+        final existingIds = allRecords.map((r) => r['id']).toSet();
+        final uniqueRecurringExpenses = mappedRecurringExpenses.where((r) => !existingIds.contains(r['id'])).toList();
+
+        allRecords.addAll(uniqueRecurringExpenses);
+      }
+
       if (!mounted) return;
       setState(() {
         allIncomeRecords = allRecords;
@@ -281,6 +325,9 @@ class _DashboardState extends State<Dashboard> {
 
         await Future.delayed(const Duration(milliseconds: 100));
       }
+      
+      // Check for renewal notifications after fetching data
+      _checkAndSendRenewalNotifications();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -376,6 +423,17 @@ class _DashboardState extends State<Dashboard> {
     _initializeToken().then((_) {
       fetchSubscriptionStatus(); // Fetch subscription status on init
       fetchClientsAndServices();
+      _initializeNotifications(); // Initialize notifications
+      
+      // Small delay to ensure data is loaded before checking notifications
+      Future.delayed(const Duration(seconds: 2), () {
+        _checkAndSendRenewalNotifications(); // Check for renewals ending in 7 days
+      });
+      
+      // Set up periodic check every hour (3600000 milliseconds)
+      _notificationTimer = Timer.periodic(const Duration(hours: 1), (timer) {
+        _checkAndSendRenewalNotifications();
+      });
     });
     _cardPageController = PageController();
     _yearScrollController = ScrollController();
@@ -413,6 +471,93 @@ class _DashboardState extends State<Dashboard> {
 
     // ✅ Immediately fetch assignments for current month
     fetchRenewals(date: currentMonth);
+  }
+
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings settings = InitializationSettings(android: androidSettings);
+
+    await _notificationsPlugin.initialize(settings);
+  }
+
+  Future<void> _checkAndSendRenewalNotifications() async {
+    try {
+      // Fetch user notification preferences
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? aToken ?? '';
+      
+      if (token.isEmpty) return;
+
+      // Check if user has enabled 7-day renewal reminders
+      final response = await http.get(
+        Uri.parse('https://www.requrr.com/api/notification-preferences'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode != 200) return;
+
+      final preferences = json.decode(response.body);
+      final remind7DaysBefore = (preferences['remind_7_days_before'] is int) 
+          ? (preferences['remind_7_days_before'] == 1) 
+          : (preferences['remind_7_days_before'] ?? false);
+
+      // If user hasn't enabled 7-day reminders, don't send notifications
+      if (!remind7DaysBefore) return;
+
+      // Check each renewal for those ending in exactly 7 days
+      for (var renewal in incomeRecords) {
+        if (renewal['due_date'] != null && renewal['status'] != 'paid') {
+          try {
+            final dueDate = DateTime.parse(renewal['due_date']);
+            final now = DateTime.now();
+            final difference = dueDate.difference(now).inDays;
+            final renewalId = renewal['id']?.toString() ?? '';
+
+            // Check if renewal is due in exactly 7 days and hasn't been notified yet
+            if (difference == 7 && !_notifiedRenewalIds.contains(renewalId)) {
+              final clientName = renewal['client_name'] ?? 'Client';
+              final serviceName = renewal['service_name'] ?? 'Service';
+              
+              await _sendRenewalNotification(clientName, serviceName, dueDate);
+              
+              // Mark this renewal as notified
+              if (renewalId.isNotEmpty) {
+                _notifiedRenewalIds.add(renewalId);
+              }
+            }
+          } catch (e) {
+            print("Error processing renewal date: $e");
+          }
+        }
+      }
+    } catch (e) {
+      print("Error checking renewals for notifications: $e");
+    }
+  }
+
+  Future<void> _sendRenewalNotification(String clientName, String serviceName, DateTime dueDate) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'renewal_channel',
+      'Renewal Reminders',
+      channelDescription: 'Channel for renewal notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
+
+    final formattedDate = DateFormat('dd MMM yyyy').format(dueDate);
+    final title = 'Renewal Due Soon';
+    final message = '$clientName - $serviceName is due on $formattedDate';
+
+    await _notificationsPlugin.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      message,
+      notificationDetails,
+    );
   }
 
   Future<String?> getToken() async {
@@ -469,6 +614,7 @@ class _DashboardState extends State<Dashboard> {
     _pageController.dispose();
     _yearScrollController.dispose();
     _cardPageController.dispose();
+    _notificationTimer?.cancel();
     super.dispose();
   }
 

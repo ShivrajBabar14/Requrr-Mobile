@@ -2,10 +2,23 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'auth_service.dart';
 import 'forgotpassword.dart';
 import 'registerform.dart';
 import 'dashboard.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'services/fcm_api_service.dart';
+
+// Add UserService definition for storing userId
+class UserService {
+  static Future<void> storeUserId(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_id', userId);
+  }
+}
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +31,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
+
+  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   bool _isLoading = false;
   bool _isPasswordVisible = false;
@@ -50,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
         body: jsonEncode({'email': email, 'password': password}),
       );
 
-      // Handle 307 redirect if present
+      // Handle 307 redirect if present
       if (resp.statusCode == 307 && resp.headers['location'] != null) {
         resp = await client.post(
           Uri.parse(resp.headers['location']!),
@@ -65,6 +80,16 @@ class _LoginScreenState extends State<LoginScreen> {
         if (data['token'] != null) {
           final token = data['token'] as String;
           await _authService.saveTokens(token, token);
+
+          // Fetch user profile to get first_name
+          final userProfile = await _fetchUserProfile(token);
+          final firstName = userProfile?['first_name'] ?? '';
+
+          // Store FCM token after successful login
+          await _storeFCMToken(token, email);
+
+          await _showLoginNotification(firstName);
+
           if (!mounted) return;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => Dashboard(token: token)),
@@ -82,9 +107,89 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _storeFCMToken(String authToken, String userEmail) async {
+    try {
+      // Extract user ID from JWT token (same as sidebar.dart)
+      Map<String, dynamic> decodedToken = JwtDecoder.decode(authToken);
+      final userId = decodedToken['id']?.toString();
+      
+      if (userId == null || userId.isEmpty) {
+        print('User ID not found in JWT token, cannot store FCM token');
+        return;
+      }
+      
+      // Store user ID for future use
+      await UserService.storeUserId(userId);
+      
+      // Store FCM token using user ID
+      final success = await FCMApiService.storeFCMToken(userId);
+      
+      if (success) {
+        print('FCM token stored successfully for user ID: $userId');
+      } else {
+        print('Failed to store FCM token for user ID: $userId');
+      }
+    } catch (e) {
+      print('Error storing FCM token: $e');
+      // Don't fail login if FCM storage fails
+    }
+  }
+
+  Future<Map<String, dynamic>?> _fetchUserProfile(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://requrr.com/api/me'),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString("userData", jsonEncode(data));
+        return data;
+      }
+    } catch (e) {
+      print("Error fetching user profile: $e");
+    }
+    return null;
+  }
+
+  Future<void> _showLoginNotification(String firstName) async {
+    // Request permission on Android 13+
+    await Permission.notification.request();
+
+    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings settings = InitializationSettings(android: androidSettings);
+
+    await _notificationsPlugin.initialize(settings);
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'login_channel',
+      'Login Notifications',
+      channelDescription: 'Channel for login notification',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
+
+    final message = firstName.isNotEmpty ? '$firstName, you have logged in to Requrr' : 'You have logged in to Requrr';
+
+    await _notificationsPlugin.show(
+      0,
+      'Login Successful',
+      message,
+      notificationDetails,
+    );
+  }
+
   void _showError(String msg) => ScaffoldMessenger.of(
     context,
   ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.black));
+
 
   /* ------------------------------------------------------------- */
   /* ---------------------------  UI  ----------------------------- */

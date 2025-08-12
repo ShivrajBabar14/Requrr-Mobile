@@ -13,6 +13,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -71,4 +72,6 @@ dependencies {
     implementation("androidx.multidex:multidex:2.0.1")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation(kotlin("stdlib-jdk8"))
+    implementation("com.google.android.play:core:1.10.3")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
