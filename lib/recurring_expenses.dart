@@ -1000,6 +1000,7 @@ class _RecurringExpensePageState extends State<RecurringExpensePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddExpenseDialog,
         backgroundColor: Colors.black,
+        shape: const CircleBorder(),
         child: const Icon(Icons.add, color: Colors.white),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
