@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'login.dart';
 
 void main() {
   runApp(const ForgotPasswordScreen());
@@ -37,9 +37,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+          ),
+        ),
         title: Text(
           "Forgot Password",
-          style: GoogleFonts.questrial(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+          style: GoogleFonts.questrial(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
         ),
         centerTitle: true,
       ),
@@ -51,7 +62,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             Center(
               child: Text(
                 "Enter email id to receive your password",
-                style: GoogleFonts.questrial(color: Colors.blueAccent, fontSize: 14),
+                style: GoogleFonts.questrial(color: Colors.black, fontSize: 14),
               ),
             ),
             const SizedBox(height: 30),
@@ -68,11 +79,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return TextField(
       controller: _emailController,
       keyboardType: TextInputType.emailAddress,
-      cursorColor: Colors.blueAccent,
-      style: GoogleFonts.questrial(
-        color: Colors.black,
-        fontSize: 16,
-      ),
+      cursorColor: Colors.black,
+      style: GoogleFonts.questrial(color: Colors.black, fontSize: 16),
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.email, color: Colors.grey),
         labelText: "Email address",
@@ -81,7 +89,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           borderSide: BorderSide(color: Colors.grey),
         ),
         focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.blueAccent),
+          borderSide: BorderSide(color: Colors.black),
         ),
       ),
     );
@@ -92,8 +100,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       child: ElevatedButton(
         onPressed: _isLoading ? null : _submitEmail,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blueAccent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          backgroundColor: Colors.black,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 40),
         ),
         child: _isLoading
@@ -101,9 +111,15 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text("SUBMIT", style: GoogleFonts.questrial(color: Colors.white, fontSize: 16)),
-                  SizedBox(width: 10),
-                  Icon(Icons.arrow_forward, color: Colors.white),
+                  Text(
+                    "SUBMIT",
+                    style: GoogleFonts.questrial(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Icon(Icons.arrow_forward, color: Colors.white),
                 ],
               ),
       ),
@@ -118,11 +134,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
-    var url = Uri.parse('https://api.camrilla.com/n/api/auth/reset-password'); // fixed double slash
+    var url = Uri.parse(
+      'https://requrr.com/api/users/forgot-password',
+    ); // HTTPS to avoid redirect
     var body = jsonEncode({"email": email});
 
     try {
@@ -132,28 +148,64 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         body: body,
       );
 
-      setState(() {
-        _isLoading = false;
-      });
+      print("Status Code: ${response.statusCode}");
+      print("Body: ${response.body}");
+
+      // Handle redirect manually if needed
+      if (response.statusCode == 307 || response.statusCode == 308) {
+        var redirectUrl = response.headers['location'];
+        if (redirectUrl != null) {
+          print("Redirecting to: $redirectUrl");
+          response = await http.post(
+            Uri.parse(redirectUrl),
+            headers: {"Content-Type": "application/json"},
+            body: body,
+          );
+          print("Redirect Response Code: ${response.statusCode}");
+          print("Redirect Response Body: ${response.body}");
+        }
+      }
+
+      setState(() => _isLoading = false);
 
       if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        _showMessage(data["message"] ?? "Password reset link sent!");
+        try {
+          var data = jsonDecode(response.body);
+          _showMessage(data["message"] ?? "Password reset link sent!");
+
+          // ✅ Close the page automatically after 1 second
+          Future.delayed(const Duration(seconds: 1), () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => LoginScreen()),
+            );
+          });
+        } catch (_) {
+          _showMessage("Password reset link sent!");
+          Future.delayed(const Duration(seconds: 1), () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => LoginScreen()),
+            );
+          });
+        }
       } else {
-        var errorData = jsonDecode(response.body);
-        _showMessage(errorData["message"] ?? "Something went wrong!");
+        try {
+          var errorData = jsonDecode(response.body);
+          _showMessage(errorData["message"] ?? "Something went wrong!");
+        } catch (_) {
+          _showMessage("Error: ${response.statusCode}");
+        }
       }
     } catch (error) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
       _showMessage("Error occurred: $error");
     }
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

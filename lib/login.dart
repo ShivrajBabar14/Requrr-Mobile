@@ -32,7 +32,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
 
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   bool _isLoading = false;
   bool _isPasswordVisible = false;
@@ -112,18 +113,18 @@ class _LoginScreenState extends State<LoginScreen> {
       // Extract user ID from JWT token (same as sidebar.dart)
       Map<String, dynamic> decodedToken = JwtDecoder.decode(authToken);
       final userId = decodedToken['id']?.toString();
-      
+
       if (userId == null || userId.isEmpty) {
         print('User ID not found in JWT token, cannot store FCM token');
         return;
       }
-      
+
       // Store user ID for future use
       await UserService.storeUserId(userId);
-      
+
       // Store FCM token using user ID
       final success = await FCMApiService.storeFCMToken(userId);
-      
+
       if (success) {
         print('FCM token stored successfully for user ID: $userId');
       } else {
@@ -161,22 +162,30 @@ class _LoginScreenState extends State<LoginScreen> {
     // Request permission on Android 13+
     await Permission.notification.request();
 
-    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings settings = InitializationSettings(android: androidSettings);
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings settings = InitializationSettings(
+      android: androidSettings,
+    );
 
     await _notificationsPlugin.initialize(settings);
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'login_channel',
-      'Login Notifications',
-      channelDescription: 'Channel for login notification',
-      importance: Importance.max,
-      priority: Priority.high,
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'login_channel',
+          'Login Notifications',
+          channelDescription: 'Channel for login notification',
+          importance: Importance.max,
+          priority: Priority.high,
+        );
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
     );
 
-    const NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
-
-    final message = firstName.isNotEmpty ? '$firstName, you have logged in to Requrr' : 'You have logged in to Requrr';
+    final message = firstName.isNotEmpty
+        ? '$firstName, you have logged in to Requrr'
+        : 'You have logged in to Requrr';
 
     await _notificationsPlugin.show(
       0,
@@ -189,7 +198,6 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showError(String msg) => ScaffoldMessenger.of(
     context,
   ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.black));
-
 
   /* ------------------------------------------------------------- */
   /* ---------------------------  UI  ----------------------------- */
@@ -214,10 +222,16 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             child: Center(
-              child: Image.asset(
-                'assets/logo.png', // <-- your white logo mark
-                width: 200,
-                height: 200,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(
+                  20,
+                ), // Change radius as needed
+                child: Image.asset(
+                  'assets/appicon.png', // <-- your white logo mark
+                  width: 150,
+                  height: 150,
+                  fit: BoxFit.cover, // Ensures it respects the border shape
+                ),
               ),
             ),
           ),
