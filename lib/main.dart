@@ -9,6 +9,8 @@ import 'login.dart';
 import 'subscription.dart';
 import 'recurring_expenses.dart';
 import 'notification_preferences.dart';
+import 'account_settings.dart';
+import 'package:google_fonts/google_fonts.dart'; // ✅ Import Google Fonts if used
 import './services/notification_service.dart'; // ✅ Import your service
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -92,6 +94,7 @@ class _AppRootState extends State<AppRoot> {
         '/subscription': (context) => SubscriptionPage(),
         '/recurring_expenses': (context) => RecurringExpensePage(),
         '/notification_preferences': (context) => const NotificationPreferencesPage(),
+        '/account_settings': (context) => const AccountSettingsPage(),
       },
       home: const Dashboard(),
     );

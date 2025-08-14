@@ -183,20 +183,11 @@ class _NotificationPreferencesPageState
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Notification Preferences'),
-          backgroundColor: Colors.black,
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      );
+      
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notification Preferences'),
-        backgroundColor: Colors.black,
-      ),
+     
       body: DefaultTextStyle(
         style: GoogleFonts.questrial(fontSize: 16, color: Colors.black),
         child: SingleChildScrollView(
@@ -204,7 +195,7 @@ class _NotificationPreferencesPageState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Configure when and how you want to be notified'),
+              
               const SizedBox(height: 24),
 
               Card(

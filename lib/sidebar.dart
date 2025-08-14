@@ -9,7 +9,11 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'register.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'settings_page.dart';
 // import 'account.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
+import 'package:flutter/services.dart';
 
 class Sidebar extends StatefulWidget {
   const Sidebar({
@@ -199,6 +203,29 @@ class _SidebarState extends State<Sidebar> {
     }
   }
 
+  Future<void> _launchFeedbackMail(BuildContext context) async {
+    final Uri emailLaunchUri = Uri.parse(
+      'mailto:rishikesh@coinage.in'
+      '?subject=${Uri.encodeComponent("Feedback on the App")}'
+      '&body=${Uri.encodeComponent("Please provide your feedback here...")}',
+    );
+
+    try {
+      if (await canLaunchUrl(emailLaunchUri)) {
+        await launchUrl(emailLaunchUri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No mail app found on this device.')),
+        );
+      }
+    } catch (e) {
+      print("Error launching email: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to open email client.')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Theme(
@@ -239,10 +266,13 @@ class _SidebarState extends State<Sidebar> {
                               "Recurring Expenses",
                               onTap: () {
                                 Navigator.pop(context);
-                                Navigator.pushNamed(context, "/recurring_expenses");
+                                Navigator.pushNamed(
+                                  context,
+                                  "/recurring_expenses",
+                                );
                               },
                             ),
-                           
+
                             _buildDrawerItem(
                               context,
                               Icons.subscriptions,
@@ -254,28 +284,10 @@ class _SidebarState extends State<Sidebar> {
                             ),
                             _buildDrawerItem(
                               context,
-                              Icons.notifications,
-                              "Notification Settings",
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.pushNamed(context, "/notification_preferences");
-                              },
-                            ),
-                         
-                            _buildDrawerItem(
-                              context,
                               Icons.feedback,
                               "Feedback",
                               onTap: () {
-                                if (token != null) {
-                                  showFeedbackDialog(context, token!);
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Please login first"),
-                                    ),
-                                  );
-                                }
+                                _launchFeedbackMail(context);
                               },
                             ),
                             _buildDrawerItem(
@@ -290,7 +302,15 @@ class _SidebarState extends State<Sidebar> {
                               context,
                               Icons.settings,
                               "Settings",
-                              onTap: () {},
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const SettingsPage(),
+                                  ),
+                                );
+                              },
                             ),
                             _buildDrawerItem(
                               context,
@@ -373,7 +393,7 @@ class _SidebarState extends State<Sidebar> {
                             if (widget.onLogout != null) widget.onLogout!();
 
                             Navigator.of(context).pushNamedAndRemoveUntil(
-                              '/login', 
+                              '/login',
                               (Route<dynamic> route) => false,
                             );
                           },

@@ -989,12 +989,34 @@ class _RecurringExpensePageState extends State<RecurringExpensePage> {
         elevation: 4,
         shadowColor: Colors.grey.withOpacity(0.5),
       ),
-      body: loading
+body: loading
           ? const Center(child: CircularProgressIndicator(color: Colors.black))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                children: expenses.map((e) => _expenseCard(e)).toList(),
+                children: expenses.isEmpty
+                    ? [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.8,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  'assets/expenses.png',
+                                  width: 300,
+                                  height: 300,
+                                  fit: BoxFit.contain,
+                                ),
+                                const SizedBox(height: 20),
+                               
+                              ],
+                            ),
+                          ),
+                        ),
+                      ]
+                    : expenses.map((e) => _expenseCard(e)).toList(),
               ),
             ),
       floatingActionButton: FloatingActionButton(

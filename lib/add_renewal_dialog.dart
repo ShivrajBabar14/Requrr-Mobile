@@ -3,11 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'subscription_limit_dialog.dart';
+
 class AddRenewalDialog extends StatefulWidget {
   final List<Map<String, dynamic>> clients;
   final List<Map<String, dynamic>> services;
   final void Function() onSuccess;
   final String token;
+  final bool hasSubscription;
+  final int currentRenewalCount;
 
   const AddRenewalDialog({
     Key? key,
@@ -15,6 +21,8 @@ class AddRenewalDialog extends StatefulWidget {
     required this.services,
     required this.onSuccess,
     required this.token,
+    required this.hasSubscription,
+    required this.currentRenewalCount,
   }) : super(key: key);
 
   @override
@@ -50,6 +58,18 @@ class _AddRenewalDialogState extends State<AddRenewalDialog> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Check subscription and renewal count limit
+    if (!widget.hasSubscription && widget.currentRenewalCount >= 5) {
+      showDialog(
+        context: context,
+        builder: (context) => SubscriptionLimitDialog(
+          currentRenewals: widget.currentRenewalCount,
+          limit: 5,
+        ),
+      );
+      return;
+    }
+
     setState(() => isSubmitting = true);
 
     final payload = {
@@ -80,9 +100,24 @@ class _AddRenewalDialogState extends State<AddRenewalDialog> {
       Navigator.pop(context);
     } else {
       final error = jsonDecode(response.body);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${error['message'] ?? 'Try again'}')),
-      );
+      final errorMessage = error['message'] ?? 'Try again';
+
+      print('AddRenewalDialog submission error: $errorMessage');
+
+      // Show subscription dialog if 403 status or limit exceeded message
+      if (response.statusCode == 403 || errorMessage.toLowerCase().contains('limit') || errorMessage.toLowerCase().contains('subscription')) {
+        showDialog(
+          context: context,
+          builder: (context) => SubscriptionLimitDialog(
+            currentRenewals: widget.currentRenewalCount,
+            limit: 5,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $errorMessage')),
+        );
+      }
     }
   }
 

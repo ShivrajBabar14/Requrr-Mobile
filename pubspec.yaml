@@ -33,7 +33,7 @@ dependencies:
 
   google_fonts: ^6.2.1
   flutter_svg: ^2.0.7
-  country_picker: ^2.0.20
+  country_picker: ^2.0.27
   intl_phone_number_input: ^0.7.4
   permission_handler: ^12.0.1
   http: ^1.3.0
@@ -100,3 +100,4 @@ flutter:
   - assets/Login.svg
   - assets/Logout.svg
   - assets/appicon.png
+  - assets/expenses.png

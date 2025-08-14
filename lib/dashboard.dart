@@ -20,8 +20,11 @@ import 'dart:io';
 import 'login.dart';
 // import 'package:flutter/services.dart';
 import 'add_renewal_dialog.dart';
+import 'subscription_limit_dialog.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:async';
+// import 'token_manager.dart';
+import 'auth_service.dart';
 
 void main() {
   runApp(const Dashboard());
@@ -111,13 +114,31 @@ class _DashboardState extends State<Dashboard> {
 
       if (!isTokenValid(aToken)) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Session expired. Please login again.')),
-        );
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => LoginScreen()),
-        );
-        return;
+        // Try to refresh token before redirecting
+        final prefs = await SharedPreferences.getInstance();
+        final refreshToken = prefs.getString('refreshToken');
+        
+        if (refreshToken != null) {
+          // Attempt token refresh
+          final authService = AuthService();
+          final refreshed = await authService.tryRefreshToken();
+          if (refreshed) {
+            // Token refreshed successfully, continue
+            final newToken = await prefs.getString('accessToken');
+            aToken = newToken;
+          } else {
+            // Refresh failed, redirect to login
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => LoginScreen()),
+            );
+            return;
+          }
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+          );
+          return;
+        }
       }
 
       final trimmedToken = aToken!.trim();
@@ -389,8 +410,11 @@ class _DashboardState extends State<Dashboard> {
       final expiryDate = DateTime.fromMillisecondsSinceEpoch(
         jsonMap['exp'] * 1000,
       );
-      return expiryDate.isAfter(DateTime.now());
+      
+      // Add 5-minute buffer to prevent false negatives
+      return expiryDate.isAfter(DateTime.now().subtract(const Duration(minutes: 5)));
     } catch (e) {
+      print("Token validation error: $e");
       return false;
     }
   }
@@ -1042,24 +1066,29 @@ class _DashboardState extends State<Dashboard> {
     child: FloatingActionButton(
       onPressed: () {
         if (!hasSubscription && incomeRecords.length >= 5) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => SubscriptionPage()),
+          showDialog(
+            context: context,
+            builder: (context) => SubscriptionLimitDialog(
+              currentRenewals: incomeRecords.length,
+              limit: 5,
+            ),
           );
           return;
         }
         showDialog(
           context: context,
-          builder: (context) => AddRenewalDialog(
-            clients: clients,
-            services: services,
-            token: aToken ?? '',
-            onSuccess: () {
-              // refresh data after success
-              fetchRenewals(date: currentMonth, isYearView: isYearView);
-              fetchClientsAndServices();
-            },
-          ),
+        builder: (context) => AddRenewalDialog(
+          clients: clients,
+          services: services,
+          token: aToken ?? '',
+          hasSubscription: hasSubscription,
+          currentRenewalCount: incomeRecords.length,
+          onSuccess: () {
+            // refresh data after success
+            fetchRenewals(date: currentMonth, isYearView: isYearView);
+            fetchClientsAndServices();
+          },
+        ),
         );
       },
       backgroundColor: Colors.black,
@@ -1165,17 +1194,19 @@ class _DashboardState extends State<Dashboard> {
   Future<void> showAddRenewalDialog(BuildContext context) async {
     final result = await showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AddRenewalDialog(
-          clients: clientList.cast<Map<String, dynamic>>(),
-          services: serviceList.cast<Map<String, dynamic>>(),
-          token: aToken ?? '',
-          onSuccess: () async {
-            await fetchRenewals(date: currentMonth, isYearView: isYearView);
-            Navigator.of(context).pop(true);
-          },
-        ); // Your form widget
-      },
+        builder: (BuildContext context) {
+          return AddRenewalDialog(
+            clients: clientList.cast<Map<String, dynamic>>(),
+            services: serviceList.cast<Map<String, dynamic>>(),
+            token: aToken ?? '',
+            hasSubscription: hasSubscription,
+            currentRenewalCount: incomeRecords.length,
+            onSuccess: () async {
+              await fetchRenewals(date: currentMonth, isYearView: isYearView);
+              Navigator.of(context).pop(true);
+            },
+          ); // Your form widget
+        },
     );
 
     if (result == true) {
