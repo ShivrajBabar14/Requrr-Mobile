@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.requrr"
-    compileSdk = 35
+    compileSdk = 36   // <-- updated to match plugins
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -22,8 +22,8 @@ android {
 
     defaultConfig {
         applicationId = "com.example.requrr"
-        minSdk = 21
-        targetSdk = 35
+        minSdk = 24        // <-- upgraded (23 → 24)
+        targetSdk = 36     // <-- update to match compileSdk
         versionCode = flutter.versionCode?.toInt() ?: 1
         versionName = flutter.versionName ?: "1.0"
         multiDexEnabled = true
@@ -60,6 +60,7 @@ android {
         }
     }
 }
+
 
 flutter {
     source = "../.."

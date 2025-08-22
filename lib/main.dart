@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'register.dart';
 import 'dashboard.dart';
@@ -47,10 +49,15 @@ class AppRoot extends StatefulWidget {
 }
 
 class _AppRootState extends State<AppRoot> {
+  bool _isLoading = true;
+  bool _isAuthenticated = false;
+  String? _authToken;
+
   @override
   void initState() {
     super.initState();
-
+    _checkAuthenticationStatus();
+    
     // Already handled inside NotificationService.initialize()
     // Just show token for debugging if needed
     FirebaseMessaging.instance.getToken().then((token) {
@@ -58,8 +65,68 @@ class _AppRootState extends State<AppRoot> {
     });
   }
 
+  Future<void> _checkAuthenticationStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('accessToken');
+      
+      if (token != null && token.isNotEmpty) {
+        // Validate token using the same logic as other parts of the app
+        final parts = token.split('.');
+        if (parts.length == 3) {
+          final payload = parts[1];
+          final normalized = base64Url.normalize(payload);
+          final decoded = utf8.decode(base64Url.decode(normalized));
+          final jsonMap = json.decode(decoded);
+          
+          if (jsonMap['exp'] != null) {
+            final expiryDate = DateTime.fromMillisecondsSinceEpoch(
+              jsonMap['exp'] * 1000,
+            );
+            // Add 5-minute buffer to prevent false negatives
+            final isValid = expiryDate.isAfter(DateTime.now().subtract(const Duration(minutes: 5)));
+            
+            if (isValid) {
+              setState(() {
+                _isAuthenticated = true;
+                _authToken = token;
+                _isLoading = false;
+              });
+              return;
+            }
+          }
+        }
+      }
+      
+      // If we get here, either no token or token is invalid
+      setState(() {
+        _isAuthenticated = false;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error checking authentication status: $e');
+      setState(() {
+        _isAuthenticated = false;
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return MaterialApp(
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+            ),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp(
       navigatorKey: navigatorKey, // ✅ Enable deep navigation
       title: 'Requrr',
@@ -96,7 +163,7 @@ class _AppRootState extends State<AppRoot> {
         '/notification_preferences': (context) => const NotificationPreferencesPage(),
         '/account_settings': (context) => const AccountSettingsPage(),
       },
-      home: const Dashboard(),
+      home: _isAuthenticated ? Dashboard(token: _authToken) : const LoginScreen(),
     );
   }
 }

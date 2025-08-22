@@ -109,7 +109,7 @@ class _DashboardState extends State<Dashboard> {
     try {
       if (aToken == null || aToken!.isEmpty) {
         final prefs = await SharedPreferences.getInstance();
-        aToken = prefs.getString('auth_token');
+        aToken = prefs.getString('accessToken');
       }
 
       if (!isTokenValid(aToken)) {
@@ -628,7 +628,7 @@ class _DashboardState extends State<Dashboard> {
       aToken = widget.token;
     } else {
       final prefs = await SharedPreferences.getInstance();
-      aToken = prefs.getString('auth_token');
+      aToken = prefs.getString('accessToken');
     }
     print('Initialized token: ${aToken != null ? "exists" : "null"}');
   }
