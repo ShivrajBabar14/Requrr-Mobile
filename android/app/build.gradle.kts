@@ -6,8 +6,9 @@ plugins {
 }
 
 android {
-    namespace = "com.example.requrr"
-    compileSdk = 36   // <-- updated to match plugins
+    namespace = "com.requrr.mobile"
+    compileSdk = 35  // ✅ Android 15 support
+
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -17,27 +18,36 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "11"
     }
 
     defaultConfig {
-        applicationId = "com.example.requrr"
-        minSdk = 24        // <-- upgraded (23 → 24)
-        targetSdk = 36     // <-- update to match compileSdk
-        versionCode = flutter.versionCode?.toInt() ?: 1
-        versionName = flutter.versionName ?: "1.0"
+        applicationId = "com.requrr.mobile"
+        minSdk = 24
+        targetSdk = 35   // ✅ must match compileSdk
+        versionCode = flutter.versionCode?.toInt() ?: 4
+        versionName = flutter.versionName ?: "1.0.3"
         multiDexEnabled = true
+    }
+
+    signingConfigs {
+        create("release") {
+            keyAlias = "upload"
+            keyPassword = "Coinage@1790"
+            storeFile = file("upload-keystore.jks")
+            storePassword = "Coinage@1790"
+        }
     }
 
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
-            isShrinkResources = true
+            isShrinkResources = false // ✅ disable temporarily if R8 fails
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
         getByName("debug") {
             isMinifyEnabled = false
@@ -61,7 +71,6 @@ android {
     }
 }
 
-
 flutter {
     source = "../.."
 }
@@ -73,6 +82,14 @@ dependencies {
     implementation("androidx.multidex:multidex:2.0.1")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation(kotlin("stdlib-jdk8"))
-    implementation("com.google.android.play:core:1.10.3")
+
+    // ✅ Replaced old Play Core library with modern equivalents
+    implementation("com.google.android.play:app-update:2.1.0")
+    implementation("com.google.android.play:review:2.0.1")
+
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
+
+
+
+
