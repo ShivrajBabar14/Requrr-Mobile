@@ -315,8 +315,16 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                         label: 'Email',
                         icon: Icons.email_outlined,
                         onChanged: (value) => _formData['email'] = value,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Email is required' : null,
+                        validator: (value) {
+                          if (value?.isEmpty ?? true) {
+                            return 'Email is required';
+                          }
+                          final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+                          if (!emailRegex.hasMatch(value!)) {
+                            return 'Please enter a valid email address';
+                          }
+                          return null;
+                        },
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 16),
