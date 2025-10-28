@@ -74,7 +74,7 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
           left: MediaQuery.of(context).padding.left,
           // top: MediaQuery.of(context).padding.top,
           right: MediaQuery.of(context).padding.right,
-          bottom: MediaQuery.of(context).padding.bottom + MediaQuery.of(context).viewInsets.bottom,
+          bottom: MediaQuery.of(context).padding.bottom,
         ),
         child: Column(
           children: [
