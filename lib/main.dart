@@ -138,7 +138,7 @@ class _AppRootState extends State<AppRoot> {
           foregroundColor: Colors.white,
           systemOverlayStyle: SystemUiOverlayStyle(
             statusBarColor: Colors.black,
-            statusBarIconBrightness: Brightness.dark,
+            statusBarIconBrightness: Brightness.light,
             statusBarBrightness: Brightness.dark,
           ),
         ),

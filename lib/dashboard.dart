@@ -20,6 +20,7 @@ import 'dart:io';
 import 'login.dart';
 // import 'package:flutter/services.dart';
 import 'add_renewal_dialog.dart';
+import 'add_renewal_form.dart';
 import 'subscription_limit_dialog.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:async';
@@ -1509,27 +1510,78 @@ class _DashboardState extends State<Dashboard> {
                 _infoTile("Notes", assignment['notes'] ?? 'No notes available'),
 
                 const SizedBox(height: 12),
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: daysUntilRenewal <= 7 ? Colors.red : Colors.black,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      daysUntilRenewal == 0
-                          ? 'Due'
-                          : '$daysUntilRenewal days left',
-                      style: GoogleFonts.onest(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: daysUntilRenewal <= 7 ? Colors.red : Colors.black,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        daysUntilRenewal == 0
+                            ? 'Due'
+                            : '$daysUntilRenewal days left',
+                        style: GoogleFonts.onest(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AddRenewalForm(
+                            clients: clients,
+                            services: services,
+                            token: aToken ?? '',
+                            onSuccess: () {
+                              Navigator.of(context).pop();
+                              fetchRenewals(date: currentMonth, isYearView: isYearView);
+                              setState(() {
+                                _sidebarVisible = false;
+                              });
+                              Future.delayed(const Duration(milliseconds: 300), () {
+                                if (mounted) {
+                                  setState(() => _showDetailSidebar = false);
+                                }
+                              });
+                            },
+                            onClose: () {
+                              Navigator.of(context).pop();
+                            },
+                            initialData: assignment,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.black, width: 1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                      ),
+                      child: Text(
+                        'Edit',
+                        style: GoogleFonts.onest(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
