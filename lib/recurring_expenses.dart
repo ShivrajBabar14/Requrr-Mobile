@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'dart:io';
+import 'dashboard.dart';
 
 class RecurringExpensePage extends StatefulWidget {
   const RecurringExpensePage({super.key});
@@ -977,7 +978,11 @@ class _RecurringExpensePageState extends State<RecurringExpensePage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            Navigator.of(context).pop();
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => Dashboard(token: token),
+              ),
+            );
           },
         ),
         title: Text(

@@ -3,6 +3,8 @@ import 'account_settings.dart';
 import 'notification_preferences.dart';
 import 'security_settings.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dashboard.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -13,6 +15,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  String? token;
 
   final List<Tab> myTabs = <Tab>[
     const Tab(text: 'Accounts'),
@@ -24,6 +27,12 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _tabController = TabController(length: myTabs.length, vsync: this);
+    fetchToken();
+  }
+
+  Future<void> fetchToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    token = prefs.getString('accessToken') ?? prefs.getString('token');
   }
 
   @override
@@ -36,6 +45,16 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => Dashboard(token: token),
+              ),
+            );
+          },
+        ),
         title: const Text('Settings'),
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.black),
