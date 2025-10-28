@@ -208,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
+      body: Column(
         children: [
           // ---------- TOP PATTERNED HEADER ----------
           Container(
@@ -236,149 +236,145 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
 
-          // ---------- SCROLLABLE FORM SHEET ----------
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: SingleChildScrollView(
+          // ---------- FORM SHEET ----------
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: -40), // Overlap the header
               padding: EdgeInsets.only(
-                top: size.height * 0.32, // start overlapping header
-                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 24,
+                right: 24,
+                top: 32,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 32,
               ),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 32,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(40),
+                  topRight: Radius.circular(40),
                 ),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(40),
-                    topRight: Radius.circular(40),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // -------------- HEADLINE --------------
+                  Text(
+                    'Login',
+                    style: GoogleFonts.questrial(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // -------------- HEADLINE --------------
-                    Text(
-                      'Login',
-                      style: GoogleFonts.questrial(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w600,
+                  const SizedBox(height: 32),
+
+                  // -------------- EMAIL FIELD --------------
+                  _StyledField(
+                    controller: _emailController,
+                    label: 'Email',
+                    icon: Icons.person_outline,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // -------------- PASSWORD FIELD --------------
+                  _StyledField(
+                    controller: _passwordController,
+                    label: 'Password',
+                    icon: Icons.lock_outline,
+                    obscure: !_isPasswordVisible,
+                    suffix: IconButton(
+                      icon: Icon(
+                        _isPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () => setState(
+                        () => _isPasswordVisible = !_isPasswordVisible,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                  ),
+                  const SizedBox(height: 32),
 
-                    // -------------- EMAIL FIELD --------------
-                    _StyledField(
-                      controller: _emailController,
-                      label: 'Email',
-                      icon: Icons.person_outline,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // -------------- PASSWORD FIELD --------------
-                    _StyledField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      icon: Icons.lock_outline,
-                      obscure: !_isPasswordVisible,
-                      suffix: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                          color: Colors.grey,
-                        ),
-                        onPressed: () => setState(
-                          () => _isPasswordVisible = !_isPasswordVisible,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // -------------- SIGN‑IN BUTTON --------------
-                    Center(
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
+                  // -------------- SIGN‑IN BUTTON --------------
+                  Center(
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                          child: _isLoading
-                              ? const CircularProgressIndicator(
+                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : Text(
+                                'Login',
+                                style: GoogleFonts.questrial(
+                                  fontSize: 16,
                                   color: Colors.white,
-                                )
-                              : Text(
-                                  'Login',
-                                  style: GoogleFonts.questrial(
-                                    fontSize: 16,
-                                    color: Colors.white,
-                                  ),
                                 ),
-                        ),
+                              ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                  ),
+                  const SizedBox(height: 24),
 
-                    // -------------- FORGOT PASSWORD --------------
-                    Center(
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ForgotPasswordScreen(),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'Forgot password?',
-                          style: GoogleFonts.questrial(color: Colors.black),
-                        ),
+                  // -------------- FORGOT PASSWORD --------------
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Forgot password?',
+                        style: GoogleFonts.questrial(color: Colors.black),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                  ),
+                  const SizedBox(height: 8),
 
-                    // -------------- SIGN‑UP PROMPT --------------
-                    Center(
-                      child: RichText(
-                        text: TextSpan(
-                          style: GoogleFonts.questrial(color: Colors.black54),
-                          children: [
-                            const TextSpan(text: "Don't have an account? "),
-                            WidgetSpan(
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SignUpPage(),
-                                    ),
-                                  );
-                                },
-                                child: Text(
-                                  'Sign Up',
-                                  style: GoogleFonts.questrial(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w600,
+                  // -------------- SIGN‑UP PROMPT --------------
+                  Center(
+                    child: RichText(
+                      text: TextSpan(
+                        style: GoogleFonts.questrial(color: Colors.black54),
+                        children: [
+                          const TextSpan(text: "Don't have an account? "),
+                          WidgetSpan(
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SignUpPage(),
                                   ),
+                                );
+                              },
+                              child: Text(
+                                'Sign Up',
+                                style: GoogleFonts.questrial(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
