@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'sidebar.dart';
 import 'payment_success.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dashboard.dart';
 
 class SubscriptionPage extends StatefulWidget {
   const SubscriptionPage({super.key});
@@ -23,6 +24,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
   String currencySymbol = '₹';
   bool isIndia = true;
   String _authToken = '';
+  String? token;
 
   late Razorpay _razorpay;
 
@@ -43,6 +45,12 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
     _initData();
+    fetchToken();
+  }
+
+  Future<void> fetchToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    token = prefs.getString('accessToken') ?? prefs.getString('token');
   }
 
   @override
@@ -510,6 +518,16 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       key: _scaffoldKey,
       drawer: const Sidebar(),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => Dashboard(token: token),
+              ),
+            );
+          },
+        ),
         title: const Text("Pricing Plans", style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.black),
