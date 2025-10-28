@@ -357,6 +357,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                 initialValue: _formData['country_code'],
                 label: 'Country',
                 icon: Icons.public_outlined,
+                enabled: false,
                 onChanged: (value) {
                   _formData['country_code'] = value;
                   // Auto-update phone code based on country
@@ -372,6 +373,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                     width: 80,
                     child: TextFormField(
                       initialValue: _formData['phone_code'],
+                      enabled: false,
                       onChanged: (value) => _formData['phone_code'] = value,
                       cursorColor: Colors.black,
                       style: GoogleFonts.questrial(color: Colors.black),
@@ -574,6 +576,7 @@ class _StyledTextFormField extends StatelessWidget {
     this.onChanged,
     this.validator,
     this.keyboardType,
+    this.enabled = true,
   });
 
   final String initialValue;
@@ -582,6 +585,7 @@ class _StyledTextFormField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final FormFieldValidator<String>? validator;
   final TextInputType? keyboardType;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -590,6 +594,7 @@ class _StyledTextFormField extends StatelessWidget {
       onChanged: onChanged,
       validator: validator,
       keyboardType: keyboardType,
+      enabled: enabled,
       cursorColor: Colors.black,
       style: GoogleFonts.questrial(color: Colors.black),
       decoration: InputDecoration(
