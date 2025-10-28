@@ -803,6 +803,7 @@ class _RecurringExpensePageState extends State<RecurringExpensePage> {
         await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
+            backgroundColor: Colors.white,
             title: const Text('Confirm Delete'),
             content: const Text(
               'Are you sure you want to delete this expense?',
@@ -810,7 +811,7 @@ class _RecurringExpensePageState extends State<RecurringExpensePage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: const Text('Cancel', style: TextStyle(color: Colors.black),),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),

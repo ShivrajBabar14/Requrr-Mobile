@@ -535,7 +535,12 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       body: plans.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.only(
+                        left: MediaQuery.of(context).padding.left,
+                        // top: MediaQuery.of(context).padding.top,
+                        right: MediaQuery.of(context).padding.right,
+                        bottom: MediaQuery.of(context).padding.bottom + MediaQuery.of(context).viewInsets.bottom,
+                      ),
               children: [
                 
                 

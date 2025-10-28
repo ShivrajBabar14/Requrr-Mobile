@@ -1,3 +1,2 @@
-- [x] Update targetSdkVersion to 35 in android/app/build.gradle.kts
-- [x] Update Play Core library dependency from invalid 2.0.0 to 1.10.3 in android/app/build.gradle.kts
-- Build the app to verify the fix
+- [x] Add padding to settings_page.dart body to prevent bottom overlap with navigation bar
+- [x] Add same padding logic to login.dart body to prevent bottom overlap with navigation bar

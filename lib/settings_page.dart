@@ -69,28 +69,36 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
         //   unselectedLabelStyle: GoogleFonts.questrial(),
         // ),
       ),
-      body: Column(
-        children: [
-          TabBar(
-            controller: _tabController,
-            tabs: myTabs,
-            labelColor: Colors.black,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Colors.black,
-            labelStyle: GoogleFonts.questrial(fontWeight: FontWeight.bold),
-            unselectedLabelStyle: GoogleFonts.questrial(),
-          ),
-          Expanded(
-            child: TabBarView(
+      body: Padding(
+        padding: EdgeInsets.only(
+          left: MediaQuery.of(context).padding.left,
+          // top: MediaQuery.of(context).padding.top,
+          right: MediaQuery.of(context).padding.right,
+          bottom: MediaQuery.of(context).padding.bottom + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          children: [
+            TabBar(
               controller: _tabController,
-              children: const [
-                AccountSettingsPage(),
-                NotificationPreferencesPage(),
-                SecuritySettingsPage(),
-              ],
+              tabs: myTabs,
+              labelColor: Colors.black,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.black,
+              labelStyle: GoogleFonts.questrial(fontWeight: FontWeight.bold),
+              unselectedLabelStyle: GoogleFonts.questrial(),
             ),
-          ),
-        ],
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: const [
+                  AccountSettingsPage(),
+                  NotificationPreferencesPage(),
+                  SecuritySettingsPage(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

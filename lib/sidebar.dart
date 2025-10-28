@@ -235,203 +235,215 @@ class _SidebarState extends State<Sidebar> {
         ),
       ),
       child: Drawer(
-        child: Column(
-          children: [
-            _buildHeader(context, userName, userPlan),
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: MediaQuery.of(context).padding.left,
+            // top: MediaQuery.of(context).padding.top,
+            right: MediaQuery.of(context).padding.right,
+            bottom:
+                MediaQuery.of(context).padding.bottom +
+                MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            children: [
+              _buildHeader(context, userName, userPlan),
 
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.only(top: 16.0),
-                color: Colors.white,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        children: [
-                          if (token != null) ...[
-                            // _buildDrawerItem(
-                            //   context,
-                            //   Icons.home,
-                            //   "Assignment",
-                            //   count: assignmentCount,
-                            //   onTap: () {
-                            //     Navigator.pop(context);
-                            //     Navigator.pushNamed(context, "/assignment");
-                            //   },
-                            // ),
-                            _buildDrawerItem(
-                              context,
-                              Icons.receipt_long,
-                              "Recurring Expenses",
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.pushNamed(
-                                  context,
-                                  "/recurring_expenses",
-                                );
-                              },
-                            ),
-
-                            _buildDrawerItem(
-                              context,
-                              Icons.subscriptions,
-                              "Subscription",
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.pushNamed(context, "/subscription");
-                              },
-                            ),
-                            _buildDrawerItem(
-                              context,
-                              Icons.feedback,
-                              "Feedback",
-                              onTap: () {
-                                _launchFeedbackMail(context);
-                              },
-                            ),
-                            _buildDrawerItem(
-                              context,
-                              Icons.smartphone,
-                              "App Info",
-                              onTap: () {
-                                Navigator.pushNamed(context, "/appInfo");
-                              },
-                            ),
-                            _buildDrawerItem(
-                              context,
-                              Icons.settings,
-                              "Settings",
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const SettingsPage(),
-                                  ),
-                                );
-                              },
-                            ),
-                            _buildDrawerItem(
-                              context,
-                              Icons.thumb_up,
-                              "Rate Us",
-                              onTap: () {},
-                            ),
-                            _buildDrawerItem(
-                              context,
-                              Icons.share,
-                              "Share App",
-                              onTap: () {},
-                            ),
-                          ] else ...[
-                            _buildDrawerItem(
-                              context,
-                              Icons.smartphone,
-                              "App Info",
-                              onTap: () {
-                                Navigator.pushNamed(context, "/appInfo");
-                              },
-                            ),
-                            _buildDrawerItem(
-                              context,
-                              Icons.thumb_up,
-                              "Rate Us",
-                              onTap: () {},
-                            ),
-                            _buildDrawerItem(
-                              context,
-                              Icons.email,
-                              "Contact Us",
-                              onTap: () {},
-                            ),
-                            _buildDrawerItem(
-                              context,
-                              Icons.share,
-                              "Share App",
-                              onTap: () {},
-                            ),
-                            _buildDrawerItem(
-                              context,
-                              null,
-                              "Login",
-                              isLogout: false,
-                              leadingIcon: SvgPicture.asset(
-                                'assets/Login.svg',
-                                width: 24,
-                                height: 24,
-                                color: Colors.red,
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ListView(
+                          padding: EdgeInsets.zero,
+                          children: [
+                            if (token != null) ...[
+                              // _buildDrawerItem(
+                              //   context,
+                              //   Icons.home,
+                              //   "Assignment",
+                              //   count: assignmentCount,
+                              //   onTap: () {
+                              //     Navigator.pop(context);
+                              //     Navigator.pushNamed(context, "/assignment");
+                              //   },
+                              // ),
+                              _buildDrawerItem(
+                                context,
+                                Icons.receipt_long,
+                                "Recurring Expenses",
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.pushNamed(
+                                    context,
+                                    "/recurring_expenses",
+                                  );
+                                },
                               ),
-                              onTap: () {
-                                Navigator.pop(context);
-                                Future.delayed(
-                                  const Duration(milliseconds: 250),
-                                  () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => Registration(),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
+
+                              _buildDrawerItem(
+                                context,
+                                Icons.subscriptions,
+                                "Subscription",
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.pushNamed(context, "/subscription");
+                                },
+                              ),
+                              _buildDrawerItem(
+                                context,
+                                Icons.feedback,
+                                "Feedback",
+                                onTap: () {
+                                  _launchFeedbackMail(context);
+                                },
+                              ),
+                              _buildDrawerItem(
+                                context,
+                                Icons.smartphone,
+                                "App Info",
+                                onTap: () {
+                                  Navigator.pushNamed(context, "/appInfo");
+                                },
+                              ),
+                              _buildDrawerItem(
+                                context,
+                                Icons.settings,
+                                "Settings",
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const SettingsPage(),
+                                    ),
+                                  );
+                                },
+                              ),
+                              _buildDrawerItem(
+                                context,
+                                Icons.thumb_up,
+                                "Rate Us",
+                                onTap: () {},
+                              ),
+                              _buildDrawerItem(
+                                context,
+                                Icons.share,
+                                "Share App",
+                                onTap: () {},
+                              ),
+                            ] else ...[
+                              _buildDrawerItem(
+                                context,
+                                Icons.smartphone,
+                                "App Info",
+                                onTap: () {
+                                  Navigator.pushNamed(context, "/appInfo");
+                                },
+                              ),
+                              _buildDrawerItem(
+                                context,
+                                Icons.thumb_up,
+                                "Rate Us",
+                                onTap: () {},
+                              ),
+                              _buildDrawerItem(
+                                context,
+                                Icons.email,
+                                "Contact Us",
+                                onTap: () {},
+                              ),
+                              _buildDrawerItem(
+                                context,
+                                Icons.share,
+                                "Share App",
+                                onTap: () {},
+                              ),
+                              _buildDrawerItem(
+                                context,
+                                null,
+                                "Login",
+                                isLogout: false,
+                                leadingIcon: SvgPicture.asset(
+                                  'assets/Login.svg',
+                                  width: 24,
+                                  height: 24,
+                                  color: Colors.red,
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Future.delayed(
+                                    const Duration(milliseconds: 250),
+                                    () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => Registration(),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    if (token != null)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
-                        child: GestureDetector(
-                          onTap: () async {
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.clear();
-                            setState(() {
-                              token = null;
-                            });
+                      if (token != null)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+                          child: GestureDetector(
+                            onTap: () async {
+                              final prefs =
+                                  await SharedPreferences.getInstance();
+                              await prefs.clear();
+                              setState(() {
+                                token = null;
+                              });
 
-                            if (widget.onLogout != null) widget.onLogout!();
+                              if (widget.onLogout != null) widget.onLogout!();
 
-                            Navigator.of(context).pushNamedAndRemoveUntil(
-                              '/login',
-                              (Route<dynamic> route) => false,
-                            );
-                          },
+                              Navigator.of(context).pushNamedAndRemoveUntil(
+                                '/login',
+                                (Route<dynamic> route) => false,
+                              );
+                            },
 
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SvgPicture.asset(
-                                  'assets/Logout.svg',
-                                  width: 20,
-                                  height: 20,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "Log Out",
-                                  style: GoogleFonts.questrial(
-                                    fontSize: 16,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.black,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SvgPicture.asset(
+                                    'assets/Logout.svg',
+                                    width: 20,
+                                    height: 20,
                                     color: Colors.white,
-                                    fontWeight: FontWeight.w600,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Log Out",
+                                    style: GoogleFonts.questrial(
+                                      fontSize: 16,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
