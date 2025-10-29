@@ -19,6 +19,7 @@ class _NotificationPreferencesPageState
   bool remind7DaysBefore = false;
   bool remindOverdue = false;
   bool emailNotifications = false;
+  bool whatsappNotifications = false;
   bool dashboardNotifications = false;
   bool paymentReceivedNotifications = false;
 
@@ -75,6 +76,9 @@ class _NotificationPreferencesPageState
           emailNotifications = (data['email_notifications'] is int)
               ? (data['email_notifications'] == 1)
               : (data['email_notifications'] ?? false);
+          whatsappNotifications = (data['whatsapp_notifications'] is int)
+              ? (data['whatsapp_notifications'] == 1)
+              : (data['whatsapp_notifications'] ?? false);
           dashboardNotifications = (data['dashboard_notifications'] is int)
               ? (data['dashboard_notifications'] == 1)
               : (data['dashboard_notifications'] ?? false);
@@ -121,6 +125,7 @@ class _NotificationPreferencesPageState
       'remind_7_days_before': remind7DaysBefore,
       'remind_overdue': remindOverdue,
       'email_notifications': emailNotifications,
+      'whatsapp_notifications': whatsappNotifications,
       'dashboard_notifications': dashboardNotifications,
       'payment_received_notifications': paymentReceivedNotifications,
     };
@@ -278,6 +283,12 @@ class _NotificationPreferencesPageState
                         'Receive notifications via email',
                         emailNotifications,
                         (val) => setState(() => emailNotifications = val),
+                      ),
+                      _buildSwitchTile(
+                        'WhatsApp Notifications',
+                        'Receive notifications via WhatsApp',
+                        whatsappNotifications,
+                        (val) => setState(() => whatsappNotifications = val),
                       ),
                       _buildSwitchTile(
                         'Dashboard Notifications',

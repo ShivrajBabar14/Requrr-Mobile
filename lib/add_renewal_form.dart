@@ -77,7 +77,7 @@ class _AddRenewalFormState extends State<AddRenewalForm> {
 
   Future<Map<String, dynamic>?> getSubscriptionStatus(String token) async {
     final res = await http.get(
-      Uri.parse('https://yourdomain.com/api/subscription/status'),
+      Uri.parse('https://www.requrr.com/api/subscription/status'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -90,7 +90,7 @@ class _AddRenewalFormState extends State<AddRenewalForm> {
 
   Future<int> getRenewalCount(String token) async {
     final res = await http.get(
-      Uri.parse('https://yourdomain.com/api/income_records?count_only=true'),
+      Uri.parse('https://www.requrr.com/api/income_records?count_only=true'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -173,8 +173,8 @@ class _AddRenewalFormState extends State<AddRenewalForm> {
 
       final isEditing = widget.initialData != null;
       final url = isEditing
-          ? 'https://yourdomain.com/api/income_records/${widget.initialData!['id']}'
-          : 'https://yourdomain.com/api/income_records';
+          ? 'https://www.requrr.com/api/income_records/${widget.initialData!['id']}'
+          : 'https://www.requrr.com/api/income_records';
       final method = isEditing ? http.put : http.post;
 
       final response = await method(

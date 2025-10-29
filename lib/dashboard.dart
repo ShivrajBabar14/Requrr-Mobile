@@ -1407,7 +1407,7 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Widget _buildDetailSidebar() {
-    if (_selectedCardIndex == null || !_showDetailSidebar)
+    if (_selectedCardIndex == null || !_showDetailSidebar || _selectedCardIndex! >= incomeRecords.length)
       return const SizedBox();
 
     final assignment = incomeRecords[_selectedCardIndex!];
