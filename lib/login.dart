@@ -212,25 +212,43 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           // ---------- TOP PATTERNED HEADER ----------
           Container(
-            height: size.height * 0.4,
+            height: size.height * 0.5,
             width: size.width,
             decoration: const BoxDecoration(
-              color: Colors.black,
+              color: Color.fromARGB(255, 205, 240, 255),
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(40),
-                bottomRight: Radius.circular(40),
+                bottomLeft: Radius.circular(170),
+                bottomRight: Radius.circular(170),
               ),
             ),
-            child: Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(
-                  20,
-                ), // Change radius as needed
-                child: Image.asset(
-                  'assets/appicon.png', // <-- your white logo mark
-                  width: 150,
-                  height: 150,
-                  fit: BoxFit.cover, // Ensures it respects the border shape
+            child: Align(
+              alignment: Alignment.center,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 60.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(
+                        20,
+                      ), // Change radius as needed
+                      child: Image.asset(
+                        'assets/appicon.png', // <-- your white logo mark
+                        width: 150,
+                        height: 150,
+                        fit: BoxFit.cover, // Ensures it respects the border shape
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+                    Text(
+                      'Your Recurring Payment Reminder.',
+                      style: GoogleFonts.questrial(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

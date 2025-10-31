@@ -1,3 +1,4 @@
 - [x] Update API URLs in add_renewal_form.dart from 'https://yourdomain.com' to 'https://www.requrr.com'
 - [x] Verify data payload includes 'recurrence_id': '' and correct types for edit PUT request
 - [ ] Test the edit functionality to ensure API integration works
+- [x] Update android/app/build.gradle.kts to change compileSdk and targetSdk from 35 to 36 to fix plugin compilation issue

@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.requrr.mobile"
-    compileSdk = 35  // ✅ Android 15 support
+    compileSdk = 36  // ✅ Android 16 support
 
     ndkVersion = "27.0.12077973"
 
@@ -24,9 +24,9 @@ android {
     defaultConfig {
         applicationId = "com.requrr.mobile"
         minSdk = 24
-        targetSdk = 35   // ✅ must match compileSdk
-        versionCode = flutter.versionCode?.toInt() ?: 4
-        versionName = flutter.versionName ?: "1.0.3"
+        targetSdk = 36   // ✅ must match compileSdk
+        versionCode = flutter.versionCode?.toInt() ?: 6
+        versionName = flutter.versionName ?: "1.0.5"
         multiDexEnabled = true
     }
 
