@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.requrr.mobile"
+    namespace = "com.requrr.app"
     compileSdk = 36  // ✅ Android 16 support
 
     ndkVersion = "27.0.12077973"
@@ -22,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.requrr.mobile"
+        applicationId = "com.requrr.app"
         minSdk = 24
         targetSdk = 36   // ✅ must match compileSdk
         versionCode = flutter.versionCode?.toInt() ?: 6

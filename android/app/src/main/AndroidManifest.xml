@@ -7,7 +7,7 @@
         
         <!-- Main Activity -->
         <activity
-            android:name="com.requrr.mobile.MainActivity"
+            android:name="com.requrr.app.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""

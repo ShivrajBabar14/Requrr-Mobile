@@ -9,7 +9,26 @@
       "client_info": {
         "mobilesdk_app_id": "1:977170197807:android:167fb00c203b9b6c9505da",
         "android_client_info": {
-          "package_name": "com.requrr.mobile"
+          "package_name": "com.example.requrr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAwYFClI_YZ3qjMCMaGTqZj7xIXPGTSDgE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:977170197807:android:a39d5c8d1876f4899505da",
+        "android_client_info": {
+          "package_name": "com.requrr.app"
         }
       },
       "oauth_client": [],

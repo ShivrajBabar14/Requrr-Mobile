@@ -216,15 +216,15 @@ class _LoginScreenState extends State<LoginScreen> {
             width: size.width,
             decoration: const BoxDecoration(
               color: Color.fromARGB(255, 205, 240, 255),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(170),
-                bottomRight: Radius.circular(170),
-              ),
+              // borderRadius: BorderRadius.only(
+              //   bottomLeft: Radius.circular(170),
+              //   bottomRight: Radius.circular(170),
+              // ),
             ),
             child: Align(
               alignment: Alignment.center,
               child: Padding(
-                padding: const EdgeInsets.only(top: 60.0),
+                padding: const EdgeInsets.only(top: 20.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -266,7 +266,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
-                  vertical: 32,
+                  vertical: 20,
                 ),
                 decoration: const BoxDecoration(
                   color: Colors.white,
